@@ -1,0 +1,79 @@
+@import './fonts.css';
+@import './tailwind.css';
+@import './theme.css';
+
+/* Default to dark mode */
+html {
+  color-scheme: dark;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+html:not(.dark) {
+  color-scheme: light;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
+}
+
+/* Safe area for mobile bottom nav */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Selection color */
+::selection {
+  background: rgba(193, 122, 90, 0.3);
+}
+
+/* Fix native form elements in dark mode */
+select,
+input[type="date"],
+input[type="time"] {
+  color-scheme: inherit;
+}
+
+.dark select,
+.dark input[type="date"],
+.dark input[type="time"] {
+  color-scheme: dark;
+}
+
+select option {
+  background: var(--card);
+  color: var(--foreground);
+}
+
+/* Focus ring for accessibility */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Dialog overlay tweaks */
+[data-slot="dialog-overlay"] {
+  backdrop-filter: blur(2px);
+}
