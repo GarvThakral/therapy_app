@@ -21,6 +21,7 @@ import {
   type PlanType,
   loginApi,
   meApi,
+  startSessionApi,
   signupApi,
   updateSessionApi,
   updateHomeworkApi,
@@ -56,6 +57,7 @@ export interface HomeworkItem {
 export interface Session {
   id: string;
   date: Date;
+  endDate: Date | null;
   number: number;
   topics: TopicTag[];
   whatStoodOut: string;
@@ -64,12 +66,13 @@ export interface Session {
   postMood: number;
   moodWord: string;
   completed: boolean;
+  isCurrent: boolean;
 }
 
 export interface UserSettings {
   displayName: string;
   therapistName: string;
-  sessionFrequency: 'weekly' | 'biweekly' | 'monthly';
+  sessionFrequency: 'weekly' | 'biweekly' | 'monthly' | 'custom';
   sessionDay: string;
   sessionTime: string;
   nextSessionDate: Date;
@@ -95,9 +98,15 @@ interface PlanBenefits {
 interface AppState {
   entries: LogEntry[];
   archivedEntries: LogEntry[];
+  sessionEntries: LogEntry[];
+  sessionArchivedEntries: LogEntry[];
   sessions: Session[];
   homework: HomeworkItem[];
+  sessionHomework: HomeworkItem[];
   settings: UserSettings;
+  activeSessionId: string | null;
+  activeSessionDate: Date;
+  activeSessionEndDate: Date | null;
   weeklyMood: string | null;
   authUser: AuthUser | null;
   token: string | null;
@@ -114,6 +123,8 @@ interface AppState {
   loadArchivedEntries: () => Promise<void>;
   addHomework: (item: Omit<HomeworkItem, 'id' | 'completed' | 'completedDate'>) => void;
   toggleHomework: (id: string) => void;
+  startSession: (date?: Date) => Promise<void>;
+  selectSession: (sessionId: string | null) => void;
   updateSettings: (updates: Partial<UserSettings>) => void;
   setWeeklyMood: (mood: string) => void;
   saveSession: (session: Omit<Session, 'id' | 'number' | 'homework'> & { homeworkItems?: Array<{ text: string; dueDate?: Date }> }) => Promise<void>;
@@ -194,6 +205,7 @@ function toSession(session: ApiSession): Session {
   return {
     id: session.id,
     date: new Date(session.date),
+    endDate: session.endDate ? new Date(session.endDate) : null,
     number: session.number,
     topics: session.topics as TopicTag[],
     whatStoodOut: session.whatStoodOut,
@@ -202,6 +214,7 @@ function toSession(session: ApiSession): Session {
     postMood: session.postMood,
     moodWord: session.moodWord || '',
     completed: session.completed,
+    isCurrent: session.isCurrent,
   };
 }
 
@@ -254,6 +267,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [homework, setHomework] = useState<HomeworkItem[]>([]);
   const [settings, setSettings] = useState<UserSettings>(defaultSettings);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [weeklyMood, setWeeklyMoodState] = useState<string | null>('🙂');
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_STORAGE_KEY));
   const [authUser, setAuthUser] = useState<AuthUser | null>(() => getStoredUser());
@@ -316,6 +330,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setSessions([]);
     setHomework([]);
     setSettings(defaultSettings);
+    setActiveSessionId(null);
     setIsAuthLoading(false);
     localStorage.removeItem(TOKEN_STORAGE_KEY);
     localStorage.removeItem(USER_STORAGE_KEY);
@@ -399,6 +414,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!token || !authUser) return;
     void Promise.all([loadActiveLogs(), loadSessions(), loadHomework(), loadProfile()]);
   }, [token, authUser, loadActiveLogs, loadHomework, loadProfile, loadSessions]);
+
+  useEffect(() => {
+    if (!activeSessionId) return;
+    if (!sessions.some(session => session.id === activeSessionId)) {
+      setActiveSessionId(null);
+    }
+  }, [activeSessionId, sessions]);
 
   const signUp = useCallback(
     async (payload: { email: string; password: string; name?: string }) => {
@@ -576,11 +598,51 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setWeeklyMoodState(mood);
   }, []);
 
+  const startSession = useCallback(async (date?: Date) => {
+    if (!token) throw new ApiError('Session expired. Please log in again.', 401);
+
+    const response = await startSessionApi(token, {
+      date: (date ?? new Date()).toISOString(),
+    });
+
+    setSessions(prev => [toSession(response.session), ...prev.map(session => {
+      if (!session.endDate && session.date < new Date(response.session.date)) {
+        return {
+          ...session,
+          endDate: new Date(response.session.date),
+          isCurrent: false,
+          completed: true,
+        };
+      }
+      return session;
+    })]);
+    setActiveSessionId(response.session.id);
+  }, [token]);
+
+  const selectSession = useCallback((sessionId: string | null) => {
+    if (!sessionId) {
+      setActiveSessionId(null);
+      return;
+    }
+
+    const selected = sessions.find(session => session.id === sessionId);
+    if (!selected) return;
+
+    setActiveSessionId(sessionId);
+  }, [sessions]);
+
   const saveSession = useCallback(
     async (session: Omit<Session, 'id' | 'number' | 'homework'> & { homeworkItems?: Array<{ text: string; dueDate?: Date }> }) => {
       if (!token) throw new ApiError('Session expired. Please log in again.', 401);
+      const fallbackCurrentId = sessions
+        .slice()
+        .sort((a, b) => b.date.getTime() - a.date.getTime())
+        .find(item => item.isCurrent || item.endDate === null)?.id;
+      const targetSessionId = activeSessionId ?? fallbackCurrentId;
 
       const response = await createSessionApi(token, {
+        action: 'save',
+        sessionId: targetSessionId ?? undefined,
         date: session.date.toISOString(),
         topics: session.topics,
         whatStoodOut: session.whatStoodOut,
@@ -594,13 +656,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         })),
       });
 
-      setSessions(prev => [toSession(response.session), ...prev]);
+      setSessions(prev => {
+        const incoming = toSession(response.session);
+        const exists = prev.some(item => item.id === incoming.id);
+        if (exists) return prev.map(item => (item.id === incoming.id ? incoming : item));
+        return [incoming, ...prev];
+      });
+      setActiveSessionId(response.session.id);
       if (response.homeworkItems.length > 0) {
         const mapped = response.homeworkItems.map(toHomeworkItem);
         setHomework(prev => [...mapped, ...prev]);
       }
     },
-    [token],
+    [activeSessionId, sessions, token],
   );
 
   const updateSession = useCallback(async (
@@ -622,14 +690,71 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setSessions(prev => prev.map(session => (session.id === id ? toSession(response.session) : session)));
   }, [token]);
 
+  const resolvedActiveSession = useMemo(() => {
+    if (activeSessionId) {
+      const explicit = sessions.find(session => session.id === activeSessionId);
+      if (explicit) return explicit;
+    }
+
+    const current = sessions.find(session => session.isCurrent || session.endDate === null);
+    if (current) return current;
+
+    return sessions
+      .slice()
+      .sort((a, b) => b.date.getTime() - a.date.getTime())[0] ?? null;
+  }, [activeSessionId, sessions]);
+
+  const activeSessionDate = resolvedActiveSession?.date ?? settings.nextSessionDate;
+  const activeSessionEndDate = resolvedActiveSession?.endDate ?? null;
+  const hasResolvedSession = Boolean(resolvedActiveSession);
+
+  const sessionEntries = useMemo(() => {
+    if (!hasResolvedSession) return entries;
+    return entries.filter(entry => {
+      const timestamp = entry.timestamp.getTime();
+      const start = activeSessionDate.getTime();
+      if (timestamp < start) return false;
+      if (activeSessionEndDate && timestamp >= activeSessionEndDate.getTime()) return false;
+      return true;
+    });
+  }, [activeSessionDate, activeSessionEndDate, entries, hasResolvedSession]);
+
+  const sessionArchivedEntries = useMemo(() => {
+    if (!hasResolvedSession) return archivedEntries;
+    return archivedEntries.filter(entry => {
+      const timestamp = entry.timestamp.getTime();
+      const start = activeSessionDate.getTime();
+      if (timestamp < start) return false;
+      if (activeSessionEndDate && timestamp >= activeSessionEndDate.getTime()) return false;
+      return true;
+    });
+  }, [activeSessionDate, activeSessionEndDate, archivedEntries, hasResolvedSession]);
+
+  const sessionHomework = useMemo(() => {
+    if (!hasResolvedSession) return homework;
+    return homework.filter(item => {
+      const sessionDate = item.sessionDate.getTime();
+      const start = activeSessionDate.getTime();
+      if (sessionDate < start) return false;
+      if (activeSessionEndDate && sessionDate >= activeSessionEndDate.getTime()) return false;
+      return true;
+    });
+  }, [activeSessionDate, activeSessionEndDate, hasResolvedSession, homework]);
+
   return (
     <AppContext.Provider
       value={{
         entries,
         archivedEntries,
+        sessionEntries,
+        sessionArchivedEntries,
         sessions,
         homework,
+        sessionHomework,
         settings,
+        activeSessionId,
+        activeSessionDate,
+        activeSessionEndDate,
         weeklyMood,
         authUser,
         token,
@@ -646,6 +771,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         loadArchivedEntries,
         addHomework,
         toggleHomework,
+        startSession,
+        selectSession,
         updateSettings,
         setWeeklyMood,
         saveSession,

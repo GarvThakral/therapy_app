@@ -187,6 +187,9 @@ function SessionCard({
             <span className="text-[11px] text-muted-foreground px-1.5 py-0.5 bg-secondary rounded" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
               #{session.number}
             </span>
+            <span className="text-[10px] text-muted-foreground px-1.5 py-0.5 bg-secondary rounded" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+              {session.endDate ? `ended ${format(session.endDate, 'MMM d, yyyy')}` : 'current'}
+            </span>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             {session.topics.map(topic => (

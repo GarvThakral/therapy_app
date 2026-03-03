@@ -26,6 +26,7 @@ export interface ApiLogEntry {
 export interface ApiSession {
   id: string;
   date: string;
+  endDate: string | null;
   number: number;
   topics: string[];
   whatStoodOut: string;
@@ -33,6 +34,7 @@ export interface ApiSession {
   postMood: number;
   moodWord: string | null;
   completed: boolean;
+  isCurrent: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -54,7 +56,7 @@ export interface ApiProfile {
   id: string;
   displayName: string;
   therapistName: string | null;
-  sessionFrequency: "weekly" | "biweekly" | "monthly" | string;
+  sessionFrequency: "weekly" | "biweekly" | "monthly" | "custom" | string;
   sessionDay: string;
   sessionTime: string;
   nextSessionDate: string | null;
@@ -68,6 +70,30 @@ export interface ApiProfile {
   fontSize: "standard" | "large" | string;
   aiSuggestions: boolean;
   onboarded: boolean;
+}
+
+export interface ApiCommunityReply {
+  id: string;
+  alias: string;
+  body: string;
+  createdAt: string;
+  updatedAt: string;
+  likes: number;
+  liked: boolean;
+}
+
+export interface ApiCommunityPost {
+  id: string;
+  alias: string;
+  title: string;
+  body: string;
+  tag: string;
+  createdAt: string;
+  updatedAt: string;
+  likes: number;
+  liked: boolean;
+  repliesCount: number;
+  replies: ApiCommunityReply[];
 }
 
 interface ApiErrorPayload {
@@ -195,6 +221,8 @@ export function getSessionsApi(token: string, completed?: boolean) {
 export function createSessionApi(
   token: string,
   payload: {
+    action?: "start" | "save";
+    sessionId?: string;
     date: string;
     topics: string[];
     whatStoodOut: string;
@@ -210,6 +238,20 @@ export function createSessionApi(
     {
       method: "POST",
       body: JSON.stringify(payload),
+    },
+    token,
+  );
+}
+
+export function startSessionApi(token: string, payload?: { date?: string }) {
+  return request<{ session: ApiSession; homeworkItems: ApiHomeworkItem[]; started: boolean }>(
+    "/sessions",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        action: "start",
+        date: payload?.date,
+      }),
     },
     token,
   );
@@ -301,9 +343,100 @@ export function updateProfileApi(token: string, payload: Partial<ApiProfile>) {
 
 export function deleteAccountApi(token: string) {
   return request<Record<string, never>>(
-    "/account",
+    "/profile",
     {
       method: "DELETE",
+    },
+    token,
+  );
+}
+
+export function getCommunityPostsApi(
+  token: string,
+  params: {
+    tag?: string;
+    sort?: "trending" | "recent";
+    search?: string;
+    replies?: "all" | "with" | "without";
+    cursor?: string | null;
+    limit?: number;
+  } = {},
+) {
+  const query = new URLSearchParams();
+  if (params.tag && params.tag !== "All") query.set("tag", params.tag);
+  if (params.sort) query.set("sort", params.sort);
+  if (params.search?.trim()) query.set("search", params.search.trim());
+  if (params.replies && params.replies !== "all") query.set("replies", params.replies);
+  if (params.cursor) query.set("cursor", params.cursor);
+  if (typeof params.limit === "number") query.set("limit", String(params.limit));
+
+  const suffix = query.toString() ? `?${query.toString()}` : "";
+  return request<{
+    viewerAlias: string;
+    posts: ApiCommunityPost[];
+    tags: string[];
+    filters: { tag: string; sort: "trending" | "recent"; search: string; replies: "all" | "with" | "without"; limit: number };
+    pagination: { nextCursor: string | null; hasMore: boolean };
+    reportReasons: string[];
+  }>(`/community${suffix}`, { method: "GET" }, token);
+}
+
+export function createCommunityPostApi(
+  token: string,
+  payload: { title: string; body: string; tag: string },
+) {
+  return request<{ post: ApiCommunityPost }>(
+    "/community",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+    token,
+  );
+}
+
+export function createCommunityCommentApi(
+  token: string,
+  payload: { postId: string; body: string },
+) {
+  return request<{ comment: ApiCommunityReply }>(
+    "/community/comments",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+    token,
+  );
+}
+
+export function toggleCommunityLikeApi(
+  token: string,
+  payload: { targetType: "post" | "comment"; targetId: string },
+) {
+  return request<{ targetType: "post" | "comment"; targetId: string; liked: boolean; likes: number }>(
+    "/community/likes",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+    token,
+  );
+}
+
+export function reportCommunityContentApi(
+  token: string,
+  payload: {
+    targetType: "post" | "comment";
+    targetId: string;
+    reason: string;
+    details?: string;
+  },
+) {
+  return request<{ reported: boolean; duplicate?: boolean; openReports?: number }>(
+    "/community/reports",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
     },
     token,
   );

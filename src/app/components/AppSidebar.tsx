@@ -1,6 +1,8 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router';
-import { Home, ClipboardList, FileText, CheckSquare, BarChart3, Settings, Lock, X, PenLine, MoreHorizontal, MessageCircle } from 'lucide-react';
+import { Home, ClipboardList, FileText, CheckSquare, BarChart3, Settings, Lock, X, PenLine, MessageCircle } from 'lucide-react';
+import { format } from 'date-fns';
+import { toast } from 'sonner';
 import { useApp } from '../context/AppContext';
 import { SessionlyLogo } from './SessionlyLogo';
 
@@ -13,7 +15,7 @@ const navItems = [
 ];
 
 export function AppSidebar({ mobileOpen, onMobileToggle }: { mobileOpen: boolean; onMobileToggle: () => void }) {
-  const { settings } = useApp();
+  const { settings, sessions, activeSessionId, activeSessionDate, activeSessionEndDate, startSession, selectSession } = useApp();
   const location = useLocation();
 
   const isActive = (path: string, exact?: boolean) => {
@@ -45,6 +47,47 @@ export function AppSidebar({ mobileOpen, onMobileToggle }: { mobileOpen: boolean
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-2">
+          <div className="px-3 pb-3 mb-2 border-b border-sidebar-border/70">
+            <p className="text-[11px] text-muted-foreground mb-1.5 uppercase tracking-wide">Session context</p>
+            <select
+              value={activeSessionId ?? 'current'}
+              onChange={e => selectSession(e.target.value === 'current' ? null : e.target.value)}
+              className="w-full bg-input-background border border-border rounded-md px-2 py-1.5 text-[12px] text-foreground outline-none"
+            >
+              <option value="current">Current session (auto)</option>
+              {sessions
+                .slice()
+                .sort((a, b) => b.date.getTime() - a.date.getTime())
+                .map(session => (
+                  <option key={session.id} value={session.id}>
+                    Session #{session.number} - {format(session.date, 'MMM d, yyyy')}
+                  </option>
+                ))}
+            </select>
+            <p className="text-[10px] text-muted-foreground mt-1">
+              Viewing: {format(activeSessionDate, 'EEE, MMM d · h:mmaaa')}
+              {activeSessionEndDate ? ` -> ${format(activeSessionEndDate, 'EEE, MMM d')}` : ' -> ongoing'}
+            </p>
+            <button
+              onClick={() => {
+                const confirmed = window.confirm('Start a new session now? This will close your current session context.');
+                if (!confirmed) return;
+
+                void startSession(new Date())
+                  .then(() => {
+                    toast.success('Started a new session and closed the previous one.');
+                    selectSession(null);
+                  })
+                  .catch((error) => {
+                    toast.error(error instanceof Error ? error.message : 'Failed to start session.');
+                  });
+              }}
+              className="mt-2 w-full px-2 py-1.5 rounded-md text-[12px] bg-terracotta text-white hover:bg-terracotta/90 transition-colors"
+            >
+              Create / Start New Session
+            </button>
+          </div>
+
           <div className="space-y-1">
             {navItems.map(item => (
               <NavLink

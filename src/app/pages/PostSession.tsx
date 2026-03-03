@@ -15,7 +15,7 @@ const allTopics: TopicTag[] = [
 ];
 
 export function PostSession() {
-  const { saveSession } = useApp();
+  const { saveSession, activeSessionDate } = useApp();
   const [whatStoodOut, setWhatStoodOut] = useState('');
   const [selectedTopics, setSelectedTopics] = useState<TopicTag[]>([]);
   const [homeworkItems, setHomeworkItems] = useState<{ text: string; dueDate: string }[]>([]);
@@ -25,7 +25,7 @@ export function PostSession() {
   const [moodWord, setMoodWord] = useState('');
   const [saved, setSaved] = useState(false);
 
-  const sessionDate = new Date();
+  const sessionDate = activeSessionDate;
 
   const toggleTopic = (topic: TopicTag) => {
     setSelectedTopics(prev =>

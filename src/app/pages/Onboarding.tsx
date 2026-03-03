@@ -20,6 +20,7 @@ export function Onboarding() {
   const [direction, setDirection] = useState(1); // 1 = forward, -1 = back
   const [sessionDate, setSessionDate] = useState('');
   const [sessionTime, setSessionTime] = useState('10:00');
+  const [sessionFrequency, setSessionFrequency] = useState<'weekly' | 'biweekly' | 'monthly' | 'custom'>('weekly');
   const [noSession, setNoSession] = useState(false);
   const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
   const [preReminder, setPreReminder] = useState(2);
@@ -51,6 +52,7 @@ export function Onboarding() {
     updateSettings({
       onboarded: true,
       nextSessionDate: sessionDate ? new Date(sessionDate + 'T' + sessionTime) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      sessionFrequency,
       sessionTime,
       preSessionReminder: preReminder,
       postSessionReminder: postReminder,
@@ -118,6 +120,18 @@ export function Onboarding() {
                 </p>
 
                 <div className="space-y-4 mb-6">
+                  <div>
+                    <select
+                      value={sessionFrequency}
+                      onChange={e => setSessionFrequency(e.target.value as 'weekly' | 'biweekly' | 'monthly' | 'custom')}
+                      className="w-full bg-card border border-border rounded-lg px-4 py-3 text-foreground text-center outline-none focus:border-terracotta/40"
+                    >
+                      <option value="weekly">Weekly</option>
+                      <option value="biweekly">Biweekly</option>
+                      <option value="monthly">Monthly</option>
+                      <option value="custom">Custom dates</option>
+                    </select>
+                  </div>
                   <div>
                     <input
                       type="date"

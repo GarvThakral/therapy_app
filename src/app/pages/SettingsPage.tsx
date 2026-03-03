@@ -29,6 +29,12 @@ export function SettingsPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
 
+  const toDateTimeInput = (value: Date) => {
+    const date = new Date(value);
+    const pad = (part: number) => String(part).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  };
+
   const Toggle = ({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) => (
     <button
       onClick={() => onChange(!checked)}
@@ -135,26 +141,50 @@ export function SettingsPage() {
               <option value="weekly">Weekly</option>
               <option value="biweekly">Biweekly</option>
               <option value="monthly">Monthly</option>
+              <option value="custom">Custom dates</option>
             </select>
           </div>
+          {settings.sessionFrequency !== 'custom' && (
+            <div className="px-5 py-4 flex items-center justify-between gap-4">
+              <p className="text-foreground text-[14px]">Session day</p>
+              <select
+                value={settings.sessionDay}
+                onChange={e => updateSettings({ sessionDay: e.target.value })}
+                className="bg-input-background border-none rounded-md px-3 py-1.5 text-[14px] text-foreground outline-none cursor-pointer"
+              >
+                {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => (
+                  <option key={day} value={day}>{day}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="px-5 py-4 flex items-center justify-between gap-4">
-            <p className="text-foreground text-[14px]">Session day</p>
-            <select
-              value={settings.sessionDay}
-              onChange={e => updateSettings({ sessionDay: e.target.value })}
-              className="bg-input-background border-none rounded-md px-3 py-1.5 text-[14px] text-foreground outline-none cursor-pointer"
-            >
-              {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => (
-                <option key={day} value={day}>{day}</option>
-              ))}
-            </select>
-          </div>
-          <div className="px-5 py-4 flex items-center justify-between gap-4">
-            <p className="text-foreground text-[14px]">Session time</p>
+            <p className="text-foreground text-[14px]">Session start time</p>
             <input
               type="time"
               value={settings.sessionTime}
               onChange={e => updateSettings({ sessionTime: e.target.value })}
+              className="bg-input-background border-none rounded-md px-3 py-1.5 text-[14px] text-foreground outline-none"
+            />
+          </div>
+          <div className="px-5 py-4 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-foreground text-[14px]">Next session begins</p>
+              <p className="text-muted-foreground text-[12px]">
+                You can pick any date/time. In recurring mode, this auto-rolls when you start a session.
+              </p>
+            </div>
+            <input
+              type="datetime-local"
+              value={toDateTimeInput(settings.nextSessionDate)}
+              onChange={e => {
+                const parsed = new Date(e.target.value);
+                if (Number.isNaN(parsed.getTime())) return;
+                updateSettings({
+                  nextSessionDate: parsed,
+                  sessionTime: `${String(parsed.getHours()).padStart(2, '0')}:${String(parsed.getMinutes()).padStart(2, '0')}`,
+                });
+              }}
               className="bg-input-background border-none rounded-md px-3 py-1.5 text-[14px] text-foreground outline-none"
             />
           </div>

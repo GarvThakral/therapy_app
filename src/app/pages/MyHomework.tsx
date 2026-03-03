@@ -7,13 +7,13 @@ import { EmptyState } from '../components/EmptyState';
 import { SectionHeader } from '../components/SectionHeader';
 
 export function MyHomework() {
-  const { homework, addHomework } = useApp();
+  const { sessionHomework, activeSessionId, activeSessionDate, addHomework } = useApp();
   const [completedOpen, setCompletedOpen] = useState(false);
   const [adding, setAdding] = useState(false);
   const [newText, setNewText] = useState('');
 
-  const activeItems = homework.filter(h => !h.completed);
-  const completedItems = homework.filter(h => h.completed);
+  const activeItems = sessionHomework.filter(h => !h.completed);
+  const completedItems = sessionHomework.filter(h => h.completed);
 
   // Group active by session date
   const groupedActive = activeItems.reduce((acc, item) => {
@@ -24,7 +24,7 @@ export function MyHomework() {
   }, {} as Record<string, typeof activeItems>);
 
   // Stats
-  const thisMonth = homework.filter(h => {
+  const thisMonth = sessionHomework.filter(h => {
     const now = new Date();
     return h.sessionDate.getMonth() === now.getMonth() && h.sessionDate.getFullYear() === now.getFullYear();
   });
@@ -37,8 +37,8 @@ export function MyHomework() {
     if (!newText.trim()) return;
     addHomework({
       text: newText.trim(),
-      sessionId: '',
-      sessionDate: new Date(),
+      sessionId: activeSessionId ?? '',
+      sessionDate: activeSessionDate,
       dueDate: undefined,
     });
     setNewText('');

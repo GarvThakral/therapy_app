@@ -10,7 +10,7 @@ import { Link } from 'react-router';
 import { useActionRateLimit } from '../hooks/useActionRateLimit';
 
 export function NextSession() {
-  const { entries, settings, updateEntry, addEntry } = useApp();
+  const { sessionEntries, settings, activeSessionDate, updateSettings, startSession, updateEntry, addEntry } = useApp();
   const [newItem, setNewItem] = useState('');
   const [addingItem, setAddingItem] = useState(false);
   const [sessionGoal, setSessionGoal] = useState('');
@@ -37,19 +37,36 @@ export function NextSession() {
     }
   };
 
-  const prepItems = entries.filter(e => e.addedToPrep);
-  const thisWeekEntries = entries.filter(e => isThisWeek(e.timestamp, { weekStartsOn: 1 }));
+  const prepItems = sessionEntries.filter(e => e.addedToPrep);
+  const thisWeekEntries = sessionEntries.filter(e => isThisWeek(e.timestamp, { weekStartsOn: 1 }));
 
   const triggerCount = thisWeekEntries.filter(e => e.type === 'trigger').length;
   const eventCount = thisWeekEntries.filter(e => e.type === 'event').length;
   const winCount = thisWeekEntries.filter(e => e.type === 'win').length;
   const thoughtCount = thisWeekEntries.filter(e => e.type === 'thought').length;
 
-  const handleStartSession = () => {
-    setSessionStarted(true);
-    toast('Session started. Good luck in there.', {
-      duration: 3000,
-    });
+  const handleStartSession = async () => {
+    const confirmed = window.confirm('Start a new session now? This will close your current session context.');
+    if (!confirmed) return;
+
+    try {
+      await startSession(new Date());
+      setSessionStarted(true);
+
+      if (settings.sessionFrequency !== 'custom') {
+        const next = new Date();
+        if (settings.sessionFrequency === 'weekly') next.setDate(next.getDate() + 7);
+        if (settings.sessionFrequency === 'biweekly') next.setDate(next.getDate() + 14);
+        if (settings.sessionFrequency === 'monthly') next.setMonth(next.getMonth() + 1);
+        updateSettings({ nextSessionDate: next });
+      }
+
+      toast('New session started. Previous session context was closed automatically.', {
+        duration: 3000,
+      });
+    } catch (error) {
+      toast(error instanceof Error ? error.message : 'Failed to start a new session.', { duration: 3000 });
+    }
   };
 
   return (
@@ -57,10 +74,10 @@ export function NextSession() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-foreground mb-1">
-          Preparing for {format(settings.nextSessionDate, 'EEEE, MMM d')}
+          Preparing for {format(activeSessionDate, 'EEEE, MMM d')}
         </h1>
         <p className="text-muted-foreground text-[14px]">
-          {format(settings.nextSessionDate, 'h:mmaaa')} · {prepItems.length} item{prepItems.length !== 1 ? 's' : ''} to discuss
+          {format(activeSessionDate, 'h:mmaaa')} · {prepItems.length} item{prepItems.length !== 1 ? 's' : ''} to discuss
         </p>
       </div>
 
@@ -293,10 +310,10 @@ export function NextSession() {
           </div>
         ) : (
           <button
-            onClick={handleStartSession}
+            onClick={() => { void handleStartSession(); }}
             className="px-8 py-3 bg-terracotta text-white rounded-lg text-[15px] hover:bg-terracotta/90 transition-all active:translate-y-px"
           >
-            I'm ready. Let's go.
+            Start new session
           </button>
         )}
       </div>

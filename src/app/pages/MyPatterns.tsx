@@ -14,14 +14,21 @@ function isSameDay(a: Date, b: Date) {
 }
 
 export function MyPatterns() {
-  const { planBenefits, entries, archivedEntries, sessions, homework } = useApp();
+  const { planBenefits, sessionEntries, sessionArchivedEntries, sessions, sessionHomework, activeSessionDate, activeSessionEndDate } = useApp();
   const [timeRange, setTimeRange] = useState<30 | 60 | 90>(30);
-  const allEntries = [...entries, ...archivedEntries];
+  const allEntries = [...sessionEntries, ...sessionArchivedEntries];
+  const sessionsInContext = sessions.filter(session => {
+    const start = activeSessionDate.getTime();
+    const at = session.date.getTime();
+    if (at < start) return false;
+    if (activeSessionEndDate && at >= activeSessionEndDate.getTime()) return false;
+    return true;
+  });
   const wins = allEntries
     .filter(item => item.type === 'win')
     .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
     .slice(0, 10);
-  const completedSessions = sessions
+  const completedSessions = sessionsInContext
     .filter(session => session.completed)
     .sort((a, b) => a.date.getTime() - b.date.getTime());
 
@@ -59,7 +66,7 @@ export function MyPatterns() {
     date.setMonth(date.getMonth() - (5 - i));
     const month = date.getMonth();
     const year = date.getFullYear();
-    const items = homework.filter(item => item.sessionDate.getMonth() === month && item.sessionDate.getFullYear() === year);
+    const items = sessionHomework.filter(item => item.sessionDate.getMonth() === month && item.sessionDate.getFullYear() === year);
     const done = items.filter(item => item.completed).length;
     const rate = items.length > 0 ? Math.round((done / items.length) * 100) : 0;
     return {

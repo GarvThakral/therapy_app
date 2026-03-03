@@ -10,7 +10,7 @@ import { EmptyState } from '../components/EmptyState';
 import { SectionHeader } from '../components/SectionHeader';
 
 export function ThisWeek() {
-  const { entries, archivedEntries, loadArchivedEntries, homework, settings, weeklyMood, setWeeklyMood } = useApp();
+  const { sessionEntries, sessionArchivedEntries, loadArchivedEntries, sessionHomework, activeSessionDate, weeklyMood, setWeeklyMood } = useApp();
   const [archiveOpen, setArchiveOpen] = React.useState(false);
 
   React.useEffect(() => {
@@ -22,16 +22,22 @@ export function ThisWeek() {
   const weekStart = startOfWeek(now, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
 
-  const thisWeekEntries = entries
+  const thisWeekEntries = sessionEntries
     .filter(e => isThisWeek(e.timestamp, { weekStartsOn: 1 }))
     .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
-  const activeHomework = homework.filter(h => !h.completed).slice(0, 3);
-  const prepCount = entries.filter(e => e.addedToPrep).length;
+  const activeHomework = sessionHomework.filter(h => !h.completed).slice(0, 3);
+  const prepCount = sessionEntries.filter(e => e.addedToPrep).length;
 
   const daysUntilSession = Math.ceil(
-    (settings.nextSessionDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+    (activeSessionDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
   );
+  const sessionLabel =
+    daysUntilSession > 0
+      ? `${daysUntilSession} day${daysUntilSession !== 1 ? 's' : ''} until session`
+      : daysUntilSession === 0
+        ? 'Today'
+        : `${Math.abs(daysUntilSession)} day${Math.abs(daysUntilSession) !== 1 ? 's' : ''} ago`;
 
   const moods = ['😞', '😐', '🙂', '😄'];
   const moodLabels = ['Rough', 'Okay', 'Good', 'Great'];
@@ -84,8 +90,8 @@ export function ThisWeek() {
             </button>
             {archiveOpen && (
               <div className="mt-3 space-y-3">
-                {archivedEntries.length > 0 ? (
-                  archivedEntries.map(entry => <LogEntryCard key={entry.id} entry={entry} />)
+                {sessionArchivedEntries.length > 0 ? (
+                  sessionArchivedEntries.map(entry => <LogEntryCard key={entry.id} entry={entry} />)
                 ) : (
                   <p className="text-[13px] text-muted-foreground">No archived logs yet.</p>
                 )}
@@ -103,10 +109,10 @@ export function ThisWeek() {
               <h4 className="text-foreground">Upcoming Session</h4>
             </div>
             <p className="text-muted-foreground text-[14px] mb-1">
-              {format(settings.nextSessionDate, 'EEEE, MMM d · h:mmaaa')}
+              {format(activeSessionDate, 'EEEE, MMM d · h:mmaaa')}
             </p>
             <p className="text-[13px] text-muted-foreground mb-3">
-              {daysUntilSession > 0 ? `${daysUntilSession} day${daysUntilSession !== 1 ? 's' : ''} until session` : 'Today'}
+              {sessionLabel}
             </p>
             <div className="flex items-center gap-2 text-[13px] text-sage mb-4">
               <span>{prepCount} thing{prepCount !== 1 ? 's' : ''} to discuss</span>
