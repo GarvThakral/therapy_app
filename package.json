@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "sitemap": "node scripts/generate-sitemap.mjs",
+    "brand:guide": "python3 scripts/generate-brand-style-guide.py",
     "build": "npm run sitemap && vite build",
     "dev": "vite"
   },

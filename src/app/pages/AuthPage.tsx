@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { SessionlyLogo } from '../components/SessionlyLogo';
 import { useApp } from '../context/AppContext';
 import { useActionRateLimit } from '../hooks/useActionRateLimit';
-import type { PlanType } from '../lib/api';
+import { getErrorMessage, type PlanType } from '../lib/api';
 
 function getPlanFromSearch(search: string): PlanType {
   const params = new URLSearchParams(search);
@@ -19,7 +19,7 @@ function getModeFromSearch(search: string): 'login' | 'signup' {
 }
 
 export function AuthPage() {
-  const { signUp, login, selectPlan, isAuthenticated, isAuthLoading, authUser } = useApp();
+  const { signUp, login, loginDemo, selectPlan, isAuthenticated, isAuthLoading, authUser } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -58,7 +58,7 @@ export function AuthPage() {
         toast('Account ready. Complete fake payment to apply your plan.', { duration: 2500 });
       }
     } catch (error) {
-      toast(error instanceof Error ? error.message : 'Authentication failed.', { duration: 3000 });
+      toast(getErrorMessage(error, 'Authentication failed.'), { duration: 3000 });
     } finally {
       setSubmitting(false);
     }
@@ -73,7 +73,7 @@ export function AuthPage() {
       toast(selectedPlan === 'PRO' ? 'Fake Pro payment complete.' : 'Free plan activated.', { duration: 2500 });
       navigate(nextPath, { replace: true });
     } catch (error) {
-      toast(error instanceof Error ? error.message : 'Failed to process fake payment.', { duration: 3000 });
+      toast(getErrorMessage(error, 'Failed to process fake payment.'), { duration: 3000 });
     } finally {
       setProcessingPayment(false);
     }
@@ -137,6 +137,20 @@ export function AuthPage() {
               {submitting ? 'Please wait...' : mode === 'signup' ? 'Create account' : 'Log in'}
             </button>
           </form>
+
+          <div className="mt-4 border-t border-border pt-4">
+            <button
+              type="button"
+              onClick={() => {
+                loginDemo();
+                toast.success('Demo login activated.');
+                navigate(nextPath, { replace: true });
+              }}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-secondary text-foreground rounded-lg text-[13px] hover:bg-secondary/80 transition-all"
+            >
+              Try a test login (no DB)
+            </button>
+          </div>
 
           {isAuthenticated && requiresPlanStep && (
             <div className="mt-5 border border-border rounded-lg p-4 bg-secondary/30">

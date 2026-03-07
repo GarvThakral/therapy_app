@@ -2,7 +2,6 @@ import React from 'react';
 import { NavLink, useLocation } from 'react-router';
 import { Home, ClipboardList, FileText, CheckSquare, BarChart3, Settings, Lock, X, PenLine, MessageCircle } from 'lucide-react';
 import { format } from 'date-fns';
-import { toast } from 'sonner';
 import { useApp } from '../context/AppContext';
 import { SessionlyLogo } from './SessionlyLogo';
 
@@ -15,7 +14,7 @@ const navItems = [
 ];
 
 export function AppSidebar({ mobileOpen, onMobileToggle }: { mobileOpen: boolean; onMobileToggle: () => void }) {
-  const { settings, sessions, activeSessionId, activeSessionDate, activeSessionEndDate, startSession, selectSession } = useApp();
+  const { settings, sessions, activeSessionId, activeSessionDate, activeSessionEndDate, selectSession } = useApp();
   const location = useLocation();
 
   const isActive = (path: string, exact?: boolean) => {
@@ -68,24 +67,13 @@ export function AppSidebar({ mobileOpen, onMobileToggle }: { mobileOpen: boolean
               Viewing: {format(activeSessionDate, 'EEE, MMM d · h:mmaaa')}
               {activeSessionEndDate ? ` -> ${format(activeSessionEndDate, 'EEE, MMM d')}` : ' -> ongoing'}
             </p>
-            <button
-              onClick={() => {
-                const confirmed = window.confirm('Start a new session now? This will close your current session context.');
-                if (!confirmed) return;
-
-                void startSession(new Date())
-                  .then(() => {
-                    toast.success('Started a new session and closed the previous one.');
-                    selectSession(null);
-                  })
-                  .catch((error) => {
-                    toast.error(error instanceof Error ? error.message : 'Failed to start session.');
-                  });
-              }}
-              className="mt-2 w-full px-2 py-1.5 rounded-md text-[12px] bg-terracotta text-white hover:bg-terracotta/90 transition-colors"
+            <NavLink
+              to="/app/next-session"
+              onClick={() => onMobileToggle()}
+              className="mt-2 w-full px-2 py-1.5 rounded-md text-[12px] bg-terracotta text-white hover:bg-terracotta/90 transition-colors text-center block"
             >
-              Create / Start New Session
-            </button>
+              Start
+            </NavLink>
           </div>
 
           <div className="space-y-1">

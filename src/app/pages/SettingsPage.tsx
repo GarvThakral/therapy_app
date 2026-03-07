@@ -3,7 +3,6 @@ import { useApp } from '../context/AppContext';
 import { SectionHeader } from '../components/SectionHeader';
 import { Moon, Sun, Monitor, Download, Trash2, Crown } from 'lucide-react';
 import { toast } from 'sonner';
-import { jsPDF } from 'jspdf';
 import {
   Dialog,
   DialogContent,
@@ -12,12 +11,15 @@ import {
   DialogDescription,
   DialogFooter,
 } from '../components/ui/dialog';
+import { getErrorMessage } from '../lib/api';
+import { buildDetailedUserReportPdf } from '../lib/pdf-report';
 
 export function SettingsPage() {
   const {
     settings,
     updateSettings,
     entries,
+    archivedEntries,
     sessions,
     homework,
     plan,
@@ -28,6 +30,7 @@ export function SettingsPage() {
   } = useApp();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
+  const [pdfExportLoading, setPdfExportLoading] = useState(false);
 
   const toDateTimeInput = (value: Date) => {
     const date = new Date(value);
@@ -58,29 +61,31 @@ export function SettingsPage() {
       return;
     }
 
-    const doc = new jsPDF();
-    const lines = [
-      `Sessionly Export - ${new Date().toLocaleDateString()}`,
-      `Name: ${settings.displayName || 'User'}`,
-      `Plan: ${plan}`,
-      `Entries: ${entries.length}`,
-      `Sessions: ${sessions.length}`,
-      `Homework items: ${homework.length}`,
-      '',
-      'Recent entries:',
-      ...entries.slice(0, 10).map((entry, index) => `${index + 1}. [${entry.type}] ${entry.text}`),
-    ];
+    setPdfExportLoading(true);
+    try {
+      const filename = buildDetailedUserReportPdf({
+        displayName: settings.displayName || 'User',
+        plan,
+        settings,
+        entries,
+        archivedEntries,
+        sessions,
+        homework,
+      });
 
-    doc.setFontSize(12);
-    doc.text(lines, 14, 20, { maxWidth: 180 });
-    doc.save(`sessionly-export-${new Date().toISOString().split('T')[0]}.pdf`);
-    toast('PDF exported.', { duration: 2000 });
+      toast(`Detailed PDF exported: ${filename}`, { duration: 2500 });
+    } catch (error) {
+      toast(getErrorMessage(error, 'Failed to generate detailed PDF report.'), { duration: 3000 });
+    } finally {
+      setPdfExportLoading(false);
+    }
   };
 
   const handleLegacyJsonExport = () => {
     const data = {
       exportDate: new Date().toISOString(),
       entries,
+      archivedEntries,
       sessions,
       homework,
       settings: { ...settings, therapistName: settings.therapistName || undefined },
@@ -293,14 +298,15 @@ export function SettingsPage() {
           <div className="px-5 py-4 flex items-center justify-between gap-4">
             <div>
               <p className="text-foreground text-[14px]">Export all data</p>
-              <p className="text-muted-foreground text-[12px]">Pro: PDF export · JSON fallback</p>
+              <p className="text-muted-foreground text-[12px]">Pro: detailed behavior report PDF · JSON fallback</p>
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={handleExport}
-                className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-md text-[13px] text-muted-foreground hover:text-foreground hover:border-muted-foreground/40 transition-colors"
+                disabled={pdfExportLoading}
+                className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-md text-[13px] text-muted-foreground hover:text-foreground hover:border-muted-foreground/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Download className="w-3.5 h-3.5" /> Export PDF
+                <Download className="w-3.5 h-3.5" /> {pdfExportLoading ? 'Building report...' : 'Export Detailed PDF'}
               </button>
               <button
                 onClick={handleLegacyJsonExport}
@@ -355,7 +361,7 @@ export function SettingsPage() {
                   await selectPlan('PRO');
                   toast('Fake Pro payment complete.', { duration: 2500 });
                 } catch (error) {
-                  toast(error instanceof Error ? error.message : 'Failed to update plan.', { duration: 3000 });
+                  toast(getErrorMessage(error, 'Failed to update plan.'), { duration: 3000 });
                 } finally {
                   setSubscriptionLoading(false);
                 }
@@ -374,7 +380,7 @@ export function SettingsPage() {
                   await selectPlan('FREE');
                   toast('Switched to Free plan.', { duration: 2500 });
                 } catch (error) {
-                  toast(error instanceof Error ? error.message : 'Failed to update plan.', { duration: 3000 });
+                  toast(getErrorMessage(error, 'Failed to update plan.'), { duration: 3000 });
                 } finally {
                   setSubscriptionLoading(false);
                 }
@@ -412,7 +418,7 @@ export function SettingsPage() {
                     setShowDeleteDialog(false);
                     toast('Account deleted.', { duration: 3000 });
                   } catch (error) {
-                    toast(error instanceof Error ? error.message : 'Failed to delete account.', { duration: 3000 });
+                    toast(getErrorMessage(error, 'Failed to delete account.'), { duration: 3000 });
                   }
                 })();
               }}

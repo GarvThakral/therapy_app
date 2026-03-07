@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router';
 import { useApp } from '../context/AppContext';
 import { SectionHeader } from '../components/SectionHeader';
 import { EmptyState } from '../components/EmptyState';
@@ -274,6 +275,14 @@ export function MyPatterns() {
             headline="No wins logged yet."
             subtext="They count. Tag them when they happen."
             icon={<Award className="w-7 h-7 text-muted-foreground" strokeWidth={1.5} />}
+            action={
+              <Link
+                to="/app"
+                className="inline-flex items-center justify-center px-3 py-1.5 rounded-md text-[12px] bg-terracotta text-white hover:bg-terracotta/90 transition-colors"
+              >
+                Log a win
+              </Link>
+            }
           />
         )}
       </section>

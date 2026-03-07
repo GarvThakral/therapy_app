@@ -98,17 +98,47 @@ export interface ApiCommunityPost {
 
 interface ApiErrorPayload {
   error?: string;
+  code?: string;
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000/api";
+const REQUEST_TIMEOUT_MS = 20_000;
+
+const STATUS_ERROR_MESSAGES: Record<number, string> = {
+  400: "Invalid request. Please check your inputs and try again.",
+  401: "Session expired. Please log in again.",
+  403: "You do not have permission to perform this action.",
+  404: "Requested resource was not found.",
+  409: "Conflicting update detected. Please refresh and try again.",
+  422: "Some fields are invalid. Please review and try again.",
+  429: "Too many requests. Please wait a moment and try again.",
+};
 
 export class ApiError extends Error {
   status: number;
+  code?: string;
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, code?: string) {
     super(message);
     this.status = status;
+    this.code = code;
   }
+}
+
+function fallbackMessageForStatus(status: number) {
+  if (STATUS_ERROR_MESSAGES[status]) return STATUS_ERROR_MESSAGES[status];
+  if (status >= 500) return "Server error. Please try again in a moment.";
+  return "Request failed. Please try again.";
+}
+
+function getErrorPayloadMessage(payload: ApiErrorPayload) {
+  return typeof payload.error === "string" && payload.error.trim() ? payload.error.trim() : null;
+}
+
+export function getErrorMessage(error: unknown, fallback = "Something went wrong. Please try again.") {
+  if (error instanceof ApiError) return error.message;
+  if (error instanceof Error && error.message.trim()) return error.message;
+  return fallback;
 }
 
 async function request<T>(
@@ -117,21 +147,50 @@ async function request<T>(
   token?: string | null,
 ): Promise<T> {
   const headers = new Headers(init.headers ?? {});
-  headers.set("Content-Type", "application/json");
+  const hasBody = init.body !== undefined && init.body !== null;
+  const isFormDataBody = typeof FormData !== "undefined" && init.body instanceof FormData;
+
+  if (hasBody && !isFormDataBody && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+  if (!headers.has("Accept")) headers.set("Accept", "application/json");
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    headers,
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
-  const data = (await response.json().catch(() => ({}))) as T & ApiErrorPayload;
-
-  if (!response.ok) {
-    throw new ApiError(data.error ?? "Request failed", response.status);
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      ...init,
+      headers,
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new ApiError("Request timed out. Please check your connection and try again.", 408);
+    }
+    throw new ApiError("Unable to reach the server. Please check your connection and try again.", 0);
+  } finally {
+    clearTimeout(timeout);
   }
 
-  return data;
+  const contentType = response.headers.get("content-type") ?? "";
+  let payload: ApiErrorPayload = {};
+
+  if (contentType.includes("application/json")) {
+    payload = (await response.json().catch(() => ({}))) as ApiErrorPayload;
+  } else {
+    const text = await response.text().catch(() => "");
+    payload = text ? { error: text } : {};
+  }
+
+  if (!response.ok) {
+    const message = getErrorPayloadMessage(payload) ?? fallbackMessageForStatus(response.status);
+    throw new ApiError(message, response.status, payload.code);
+  }
+
+  return payload as T;
 }
 
 export function signupApi(payload: { email: string; password: string; name?: string }) {

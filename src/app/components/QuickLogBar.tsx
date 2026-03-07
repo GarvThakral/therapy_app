@@ -5,6 +5,7 @@ import { useApp } from '../context/AppContext';
 import type { EntryType } from '../context/AppContext';
 import { toast } from 'sonner';
 import { useActionRateLimit } from '../hooks/useActionRateLimit';
+import { getErrorMessage } from '../lib/api';
 
 const typeOptions: { value: EntryType; label: string; emoji: string }[] = [
   { value: 'trigger', label: 'Trigger', emoji: '🔴' },
@@ -44,7 +45,7 @@ export function QuickLogBar() {
       inputRef.current?.focus();
       toast(addToPrep ? 'Logged + added to session prep.' : 'Logged.', { duration: 2000 });
     } catch (error) {
-      toast(error instanceof Error ? error.message : 'Failed to save log.', { duration: 3000 });
+      toast(getErrorMessage(error, 'Failed to save log.'), { duration: 3000 });
     }
   };
 

@@ -8,6 +8,7 @@ import { SectionHeader } from '../components/SectionHeader';
 import { toast } from 'sonner';
 import { Link } from 'react-router';
 import { useActionRateLimit } from '../hooks/useActionRateLimit';
+import { getErrorMessage } from '../lib/api';
 
 export function NextSession() {
   const { sessionEntries, settings, activeSessionDate, updateSettings, startSession, updateEntry, addEntry } = useApp();
@@ -33,7 +34,7 @@ export function NextSession() {
       setAddingItem(false);
       toast('Added to your session prep.', { duration: 2000 });
     } catch (error) {
-      toast(error instanceof Error ? error.message : 'Failed to save log.', { duration: 3000 });
+      toast(getErrorMessage(error, 'Failed to save log.'), { duration: 3000 });
     }
   };
 
@@ -65,7 +66,7 @@ export function NextSession() {
         duration: 3000,
       });
     } catch (error) {
-      toast(error instanceof Error ? error.message : 'Failed to start a new session.', { duration: 3000 });
+      toast(getErrorMessage(error, 'Failed to start a new session.'), { duration: 3000 });
     }
   };
 

@@ -15,6 +15,7 @@ import {
   deleteLogApi,
   fakePaymentApi,
   getHomeworkApi,
+  getErrorMessage,
   getLogsApi,
   getProfileApi,
   getSessionsApi,
@@ -131,6 +132,7 @@ interface AppState {
   updateSession: (id: string, updates: Partial<Pick<Session, 'date' | 'topics' | 'whatStoodOut' | 'prepItems' | 'postMood' | 'moodWord' | 'completed'>>) => Promise<void>;
   signUp: (payload: { email: string; password: string; name?: string }) => Promise<void>;
   login: (payload: { email: string; password: string }) => Promise<void>;
+  loginDemo: () => void;
   logout: () => void;
   deleteAccount: () => Promise<void>;
   selectPlan: (plan: PlanType) => Promise<void>;
@@ -140,6 +142,7 @@ interface AppState {
 
 const TOKEN_STORAGE_KEY = 'sessionly_jwt';
 const USER_STORAGE_KEY = 'sessionly_user';
+const DEMO_TOKEN = 'DEMO_TOKEN';
 
 const defaultSettings: UserSettings = {
   displayName: 'Alex',
@@ -160,6 +163,78 @@ const defaultSettings: UserSettings = {
   isPro: false,
   onboarded: true,
 };
+
+const demoUser: AuthUser = {
+  id: 'demo-user',
+  email: 'demo@example.com',
+  name: 'Demo User',
+  plan: 'PRO',
+};
+
+const now = new Date();
+const demoSessionDate = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
+const demoSessions: Session[] = [
+  {
+    id: 'demo-session-1',
+    date: demoSessionDate,
+    endDate: null,
+    number: 1,
+    topics: ['Anxiety', 'Work'],
+    whatStoodOut: 'Practiced boundary setting and identified work triggers.',
+    prepItems: ['Discuss last week incident', 'Share journaling highlights'],
+    homework: [],
+    postMood: 6,
+    moodWord: 'Lighter',
+    completed: false,
+    isCurrent: true,
+  },
+];
+
+const demoEntries: LogEntry[] = [
+  {
+    id: 'demo-log-1',
+    text: 'Felt anxious before Monday meeting; heartbeat elevated.',
+    type: 'trigger',
+    intensity: 4,
+    timestamp: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000),
+    addedToPrep: true,
+    prepNote: 'Bring up with therapist',
+    checkedOff: false,
+    isArchived: false,
+  },
+  {
+    id: 'demo-log-2',
+    text: 'Took a walk and breathing felt calmer afterwards.',
+    type: 'event',
+    intensity: 2,
+    timestamp: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000),
+    addedToPrep: false,
+    checkedOff: false,
+    isArchived: false,
+  },
+  {
+    id: 'demo-log-3',
+    text: 'Win: said no to extra task at work politely.',
+    type: 'win',
+    intensity: 3,
+    timestamp: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000),
+    addedToPrep: false,
+    checkedOff: false,
+    isArchived: false,
+  },
+];
+
+const demoHomework: HomeworkItem[] = [
+  {
+    id: 'demo-hw-1',
+    text: 'Write down 3 situations where I felt tense.',
+    sessionId: 'demo-session-1',
+    sessionDate: demoSessionDate,
+    dueDate: undefined,
+    completed: false,
+    completedDate: undefined,
+  },
+];
 
 const AppContext = createContext<AppState | null>(null);
 
@@ -337,19 +412,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const loadActiveLogs = useCallback(async () => {
-    if (!token) return;
+    if (!token || token === DEMO_TOKEN) return;
 
     setIsLogsLoading(true);
     try {
       const response = await getLogsApi(token, 'active');
       setEntries(response.logs.map(toLogEntry));
+    } catch {
+      setEntries([]);
     } finally {
       setIsLogsLoading(false);
     }
   }, [token]);
 
   const loadArchivedEntries = useCallback(async () => {
-    if (!token) return;
+    if (!token || token === DEMO_TOKEN) return;
 
     try {
       const response = await getLogsApi(token, 'archive');
@@ -360,7 +437,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [token]);
 
   const loadSessions = useCallback(async () => {
-    if (!token) return;
+    if (!token || token === DEMO_TOKEN) return;
     try {
       const response = await getSessionsApi(token);
       setSessions(response.sessions.map(toSession));
@@ -370,7 +447,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [token]);
 
   const loadHomework = useCallback(async () => {
-    if (!token) return;
+    if (!token || token === DEMO_TOKEN) return;
     try {
       const response = await getHomeworkApi(token);
       setHomework(response.homework.map(toHomeworkItem));
@@ -380,7 +457,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [token]);
 
   const loadProfile = useCallback(async () => {
-    if (!token) return;
+    if (!token || token === DEMO_TOKEN) return;
     try {
       const response = await getProfileApi(token);
       setSettings(prev => toSettingsFromProfile(response.profile, prev));
@@ -446,17 +523,39 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [persistAuth],
   );
 
+  const loginDemo = useCallback(() => {
+    persistAuth(DEMO_TOKEN, demoUser);
+    setSettings(prev => ({
+      ...prev,
+      displayName: demoUser.name || prev.displayName,
+      isPro: true,
+    }));
+    setEntries(demoEntries);
+    setArchivedEntries([]);
+    setSessions(demoSessions);
+    setHomework(demoHomework);
+    setActiveSessionId(demoSessions[0]?.id ?? null);
+    setWeeklyMoodState('🙂');
+  }, [persistAuth]);
+
   const selectPlan = useCallback(
     async (nextPlan: PlanType) => {
       if (!token) {
         throw new ApiError('Please log in first.', 401);
+      }
+      if (token === DEMO_TOKEN) {
+        const nextUser = { ...(authUser ?? demoUser), plan: nextPlan };
+        setAuthUser(nextUser);
+        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(nextUser));
+        setSettings(prev => ({ ...prev, isPro: nextPlan === 'PRO' }));
+        return;
       }
 
       const response = await fakePaymentApi(nextPlan, token);
       setAuthUser(response.user);
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(response.user));
     },
-    [token],
+    [authUser, token],
   );
 
   const deleteAccount = useCallback(async () => {
@@ -472,6 +571,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       if (!token) {
         throw new ApiError('Session expired. Please log in again.', 401);
+      }
+      if (token === DEMO_TOKEN) {
+        const newEntry: LogEntry = {
+          id: `demo-log-${Date.now()}`,
+          text: entry.text,
+          type: entry.type,
+          intensity: entry.intensity,
+          timestamp: now,
+          addedToPrep: addToPrep ?? entry.addedToPrep ?? false,
+          prepNote: entry.prepNote,
+          checkedOff: Boolean(entry.checkedOff),
+          isArchived: false,
+        };
+        setEntries(prev => [newEntry, ...prev]);
+        return true;
       }
       if (maxMonthlyEntries !== null) {
         const countThisMonth = entries.filter(existing => isSameMonth(existing.timestamp, now)).length;
@@ -492,7 +606,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return true;
       } catch (error) {
         if (error instanceof ApiError) throw error;
-        throw new ApiError('Failed to save log. Please try again.', 500);
+        throw new ApiError(getErrorMessage(error, 'Failed to save log. Please try again.'), 500);
       }
     },
     [entries, planBenefits.maxMonthlyEntries, token],
@@ -540,7 +654,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
     setHomework(prev => [optimistic, ...prev]);
 
-    if (!token) return;
+    if (!token || token === DEMO_TOKEN) return;
     void createHomeworkApi(token, {
       text: item.text,
       sessionId: item.sessionId,
@@ -601,6 +715,37 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const startSession = useCallback(async (date?: Date) => {
     if (!token) throw new ApiError('Session expired. Please log in again.', 401);
 
+    if (token === DEMO_TOKEN) {
+      const sessionDate = date ?? new Date();
+      const newSession: Session = {
+        id: `demo-session-${Date.now()}`,
+        date: sessionDate,
+        endDate: null,
+        number: sessions.length > 0 ? Math.max(...sessions.map(s => s.number)) + 1 : 1,
+        topics: [],
+        whatStoodOut: '',
+        prepItems: [],
+        homework: [],
+        postMood: 5,
+        moodWord: '',
+        completed: false,
+        isCurrent: true,
+      };
+
+      setSessions(prev =>
+        [
+          newSession,
+          ...prev.map(session =>
+            session.endDate === null && session.date < sessionDate
+              ? { ...session, endDate: sessionDate, isCurrent: false, completed: true }
+              : { ...session, isCurrent: false },
+          ),
+        ],
+      );
+      setActiveSessionId(newSession.id);
+      return;
+    }
+
     const response = await startSessionApi(token, {
       date: (date ?? new Date()).toISOString(),
     });
@@ -640,6 +785,48 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         .find(item => item.isCurrent || item.endDate === null)?.id;
       const targetSessionId = activeSessionId ?? fallbackCurrentId;
 
+      if (token === DEMO_TOKEN) {
+        const newSession: Session = {
+          id: targetSessionId ?? `demo-session-${Date.now()}`,
+          date: session.date,
+          endDate: null,
+          number: sessions.length > 0 ? Math.max(...sessions.map(s => s.number)) + 1 : 1,
+          topics: session.topics,
+          whatStoodOut: session.whatStoodOut,
+          prepItems: session.prepItems,
+          homework: [],
+          postMood: session.postMood,
+          moodWord: session.moodWord,
+          completed: session.completed,
+          isCurrent: true,
+        };
+        setSessions(prev => {
+          const exists = prev.some(item => item.id === newSession.id);
+          const updatedPrev = prev.map(item => ({
+            ...item,
+            isCurrent: item.id === newSession.id,
+            endDate: item.id !== newSession.id && item.isCurrent ? newSession.date : item.endDate,
+          }));
+          return exists
+            ? updatedPrev.map(item => (item.id === newSession.id ? newSession : item))
+            : [newSession, ...updatedPrev];
+        });
+        if (session.homeworkItems?.length) {
+          const mapped = session.homeworkItems.map(item => ({
+            id: `demo-hw-${Date.now()}-${Math.random()}`,
+            text: item.text,
+            sessionId: newSession.id,
+            sessionDate: newSession.date,
+            dueDate: item.dueDate,
+            completed: false,
+            completedDate: undefined,
+          }));
+          setHomework(prev => [...mapped, ...prev]);
+        }
+        setActiveSessionId(newSession.id);
+        return;
+      }
+
       const response = await createSessionApi(token, {
         action: 'save',
         sessionId: targetSessionId ?? undefined,
@@ -676,6 +863,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     updates: Partial<Pick<Session, 'date' | 'topics' | 'whatStoodOut' | 'prepItems' | 'postMood' | 'moodWord' | 'completed'>>,
   ) => {
     if (!token) throw new ApiError('Session expired. Please log in again.', 401);
+
+    if (token === DEMO_TOKEN) {
+      setSessions(prev => prev.map(session => {
+        if (session.id !== id) return session;
+        return {
+          ...session,
+          ...updates,
+          date: updates.date ?? session.date,
+        };
+      }));
+      return;
+    }
 
     const payload: Record<string, unknown> = {};
     if (updates.date) payload.date = updates.date.toISOString();
@@ -779,6 +978,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         updateSession,
         signUp,
         login,
+        loginDemo,
         logout,
         deleteAccount,
         selectPlan,

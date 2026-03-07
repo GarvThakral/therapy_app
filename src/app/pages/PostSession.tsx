@@ -8,6 +8,7 @@ import { SectionHeader } from '../components/SectionHeader';
 import { toast } from 'sonner';
 import { Link } from 'react-router';
 import type { TopicTag } from '../context/AppContext';
+import { getErrorMessage } from '../lib/api';
 
 const allTopics: TopicTag[] = [
   'Anxiety', 'Family', 'Relationships', 'Work', 'Self-esteem',
@@ -62,7 +63,7 @@ export function PostSession() {
       setSaved(true);
       toast('Saved. Good work today.', { duration: 3000 });
     } catch (error) {
-      toast(error instanceof Error ? error.message : 'Failed to save session.', { duration: 3000 });
+      toast(getErrorMessage(error, 'Failed to save session.'), { duration: 3000 });
     }
   };
 
@@ -79,12 +80,18 @@ export function PostSession() {
           <p className="text-muted-foreground text-[14px] mb-6">
             Your session notes are safe. Come back anytime to review them.
           </p>
-          <div className="flex gap-4">
-            <Link to="/app" className="text-[13px] text-terracotta hover:underline">
-              Back to This Week
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Link
+              to="/app/past-sessions"
+              className="inline-flex items-center justify-center px-4 py-2 rounded-lg text-[13px] bg-terracotta text-white hover:bg-terracotta/90 transition-colors"
+            >
+              View my session notes
             </Link>
-            <Link to="/app/past-sessions" className="text-[13px] text-muted-foreground hover:text-foreground transition-colors">
-              View past sessions
+            <Link
+              to="/app"
+              className="inline-flex items-center justify-center px-4 py-2 rounded-lg text-[13px] border border-border text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+            >
+              Back to This Week
             </Link>
           </div>
         </div>

@@ -5,10 +5,10 @@ import { toast } from 'sonner';
 
 import { useApp } from '../context/AppContext';
 import {
-  ApiError,
   type ApiCommunityPost,
   createCommunityCommentApi,
   createCommunityPostApi,
+  getErrorMessage,
   getCommunityPostsApi,
   reportCommunityContentApi,
   toggleCommunityLikeApi,
@@ -97,8 +97,7 @@ export function Discussions() {
       setNextCursor(response.pagination.nextCursor);
       setHasMore(response.pagination.hasMore);
     } catch (error) {
-      const message = error instanceof ApiError ? error.message : 'Failed to load community posts.';
-      toast.error(message);
+      toast.error(getErrorMessage(error, 'Failed to load community posts.'));
     } finally {
       if (append) {
         setIsLoadingMore(false);
@@ -248,8 +247,7 @@ export function Discussions() {
       toast.success('Post shared anonymously.');
       await loadDiscussions({ append: false, cursor: null });
     } catch (error) {
-      const message = error instanceof ApiError ? error.message : 'Failed to share post.';
-      toast.error(message);
+      toast.error(getErrorMessage(error, 'Failed to share post.'));
     } finally {
       setIsCreatingPost(false);
     }
@@ -286,8 +284,7 @@ export function Discussions() {
       setReplyingTo(null);
       toast.success('Reply posted.');
     } catch (error) {
-      const message = error instanceof ApiError ? error.message : 'Failed to post reply.';
-      toast.error(message);
+      toast.error(getErrorMessage(error, 'Failed to post reply.'));
     } finally {
       setIsPostingReplyFor(null);
     }
@@ -328,8 +325,7 @@ export function Discussions() {
 
       await loadDiscussions({ append: false, cursor: null });
     } catch (error) {
-      const message = error instanceof ApiError ? error.message : 'Failed to submit report.';
-      toast.error(message);
+      toast.error(getErrorMessage(error, 'Failed to submit report.'));
     }
   };
 

@@ -1,17 +1,50 @@
 import React from 'react';
 import { Link } from 'react-router';
-import { format, startOfWeek, endOfWeek, isThisWeek } from 'date-fns';
+import { addDays, format, startOfWeek, endOfWeek, isThisWeek, subWeeks } from 'date-fns';
 import { ArrowRight, CalendarDays, CheckSquare, PenLine } from 'lucide-react';
-import { useApp } from '../context/AppContext';
+import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { toast } from 'sonner';
+import { useApp, type LogEntry } from '../context/AppContext';
 import { QuickLogBar } from '../components/QuickLogBar';
 import { LogEntryCard } from '../components/LogEntryCard';
 import { HomeworkItemComponent } from '../components/HomeworkItemComponent';
 import { EmptyState } from '../components/EmptyState';
-import { SectionHeader } from '../components/SectionHeader';
+import { getErrorMessage } from '../lib/api';
+
+const DAILY_MOOD_MARKER = '__daily_mood_checkin__';
+
+const moodOptions = [
+  { emoji: '😞', label: 'Rough', score: 1 },
+  { emoji: '😕', label: 'Low', score: 2 },
+  { emoji: '😐', label: 'Okay', score: 3 },
+  { emoji: '🙂', label: 'Good', score: 4 },
+  { emoji: '😄', label: 'Great', score: 5 },
+];
+
+function isDailyMoodEntry(entry: LogEntry) {
+  return entry.prepNote === DAILY_MOOD_MARKER;
+}
+
+function moodMetaByScore(score: number) {
+  return moodOptions.find(option => option.score === score) ?? moodOptions[2];
+}
 
 export function ThisWeek() {
-  const { sessionEntries, sessionArchivedEntries, loadArchivedEntries, sessionHomework, activeSessionDate, weeklyMood, setWeeklyMood } = useApp();
+  const {
+    sessionEntries,
+    sessionArchivedEntries,
+    loadArchivedEntries,
+    sessionHomework,
+    activeSessionDate,
+    addEntry,
+    updateEntry,
+  } = useApp();
   const [archiveOpen, setArchiveOpen] = React.useState(false);
+  const [isSavingMood, setIsSavingMood] = React.useState(false);
+
+  React.useEffect(() => {
+    void loadArchivedEntries();
+  }, [loadArchivedEntries]);
 
   React.useEffect(() => {
     if (!archiveOpen) return;
@@ -21,13 +54,75 @@ export function ThisWeek() {
   const now = new Date();
   const weekStart = startOfWeek(now, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
+  const allSessionLogs = [...sessionEntries, ...sessionArchivedEntries];
 
-  const thisWeekEntries = sessionEntries
+  const moodEntryByDay = React.useMemo(() => {
+    const byDay = new Map<string, LogEntry>();
+
+    for (const entry of allSessionLogs) {
+      if (!isDailyMoodEntry(entry)) continue;
+      const dayKey = format(entry.timestamp, 'yyyy-MM-dd');
+      const existing = byDay.get(dayKey);
+      if (!existing || existing.timestamp.getTime() < entry.timestamp.getTime()) {
+        byDay.set(dayKey, entry);
+      }
+    }
+
+    return byDay;
+  }, [allSessionLogs]);
+
+  const todayKey = format(now, 'yyyy-MM-dd');
+  const todayMoodEntry = moodEntryByDay.get(todayKey) ?? null;
+
+  const moodTrendData = React.useMemo(() => (
+    Array.from({ length: 14 }, (_, index) => {
+      const date = addDays(now, index - 13);
+      const key = format(date, 'yyyy-MM-dd');
+      const entry = moodEntryByDay.get(key);
+      const moodMeta = entry ? moodMetaByScore(entry.intensity) : null;
+      return {
+        date,
+        label: format(date, 'MMM d'),
+        short: format(date, 'EEE'),
+        score: entry?.intensity ?? null,
+        moodLabel: moodMeta?.label ?? 'No check-in',
+      };
+    })
+  ), [moodEntryByDay, now]);
+
+  const weeklyAverageData = React.useMemo(() => {
+    const currentWeekStart = startOfWeek(now, { weekStartsOn: 1 });
+
+    return Array.from({ length: 8 }, (_, index) => {
+      const weekStartDate = subWeeks(currentWeekStart, 7 - index);
+      const weekEndDate = addDays(weekStartDate, 6);
+      const weekMoods = Array.from(moodEntryByDay.values()).filter(entry => {
+        const ts = entry.timestamp.getTime();
+        return ts >= weekStartDate.getTime() && ts <= weekEndDate.getTime();
+      });
+
+      const average = weekMoods.length > 0
+        ? Number((weekMoods.reduce((sum, entry) => sum + entry.intensity, 0) / weekMoods.length).toFixed(1))
+        : null;
+
+      return {
+        weekLabel: format(weekStartDate, 'MMM d'),
+        weekRange: `${format(weekStartDate, 'MMM d')} - ${format(weekEndDate, 'MMM d')}`,
+        average,
+        count: weekMoods.length,
+      };
+    });
+  }, [moodEntryByDay, now]);
+
+  const nonMoodEntries = sessionEntries.filter(entry => !isDailyMoodEntry(entry));
+  const archivedNonMoodEntries = sessionArchivedEntries.filter(entry => !isDailyMoodEntry(entry));
+
+  const thisWeekEntries = nonMoodEntries
     .filter(e => isThisWeek(e.timestamp, { weekStartsOn: 1 }))
     .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
   const activeHomework = sessionHomework.filter(h => !h.completed).slice(0, 3);
-  const prepCount = sessionEntries.filter(e => e.addedToPrep).length;
+  const prepCount = nonMoodEntries.filter(e => e.addedToPrep).length;
 
   const daysUntilSession = Math.ceil(
     (activeSessionDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
@@ -39,8 +134,46 @@ export function ThisWeek() {
         ? 'Today'
         : `${Math.abs(daysUntilSession)} day${Math.abs(daysUntilSession) !== 1 ? 's' : ''} ago`;
 
-  const moods = ['😞', '😐', '🙂', '😄'];
-  const moodLabels = ['Rough', 'Okay', 'Good', 'Great'];
+  const todayMoodMeta = todayMoodEntry ? moodMetaByScore(todayMoodEntry.intensity) : null;
+
+  const handleDailyMoodSelect = async (score: number) => {
+    if (isSavingMood) return;
+
+    const mood = moodMetaByScore(score);
+    const moodText = `Daily mood check-in: ${mood.emoji} ${mood.label}`;
+    setIsSavingMood(true);
+    try {
+      if (todayMoodEntry) {
+        updateEntry(todayMoodEntry.id, {
+          text: moodText,
+          type: 'thought',
+          intensity: score,
+          addedToPrep: false,
+          prepNote: DAILY_MOOD_MARKER,
+          checkedOff: false,
+        });
+        toast("Today's mood updated.", { duration: 2000 });
+      } else {
+        const added = await addEntry({
+          text: moodText,
+          type: 'thought',
+          intensity: score,
+          addedToPrep: false,
+          prepNote: DAILY_MOOD_MARKER,
+          checkedOff: false,
+        });
+        if (!added) {
+          toast('Free plan limit reached (30 logs/month). Upgrade to Pro for unlimited logs.', { duration: 3000 });
+          return;
+        }
+        toast("Today's mood logged.", { duration: 2000 });
+      }
+    } catch (error) {
+      toast(getErrorMessage(error, "Unable to save today's mood. Please try again."), { duration: 3000 });
+    } finally {
+      setIsSavingMood(false);
+    }
+  };
 
   return (
     <div className="max-w-6xl mx-auto px-4 lg:px-8 py-6 lg:py-8">
@@ -90,8 +223,8 @@ export function ThisWeek() {
             </button>
             {archiveOpen && (
               <div className="mt-3 space-y-3">
-                {sessionArchivedEntries.length > 0 ? (
-                  sessionArchivedEntries.map(entry => <LogEntryCard key={entry.id} entry={entry} />)
+                {archivedNonMoodEntries.length > 0 ? (
+                  archivedNonMoodEntries.map(entry => <LogEntryCard key={entry.id} entry={entry} />)
                 ) : (
                   <p className="text-[13px] text-muted-foreground">No archived logs yet.</p>
                 )}
@@ -157,25 +290,129 @@ export function ThisWeek() {
 
           {/* Weekly mood */}
           <div className="bg-card border border-border rounded-lg p-5">
-            <h4 className="text-foreground mb-3">How are you doing this week?</h4>
-            <div className="flex items-center justify-between px-2">
-              {moods.map((m, i) => (
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-foreground">How are you doing today?</h4>
+              {todayMoodMeta ? (
+                <span className="text-[12px] text-terracotta" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                  {todayMoodMeta.emoji} {todayMoodMeta.label}
+                </span>
+              ) : (
+                <span className="text-[12px] text-muted-foreground">No check-in yet</span>
+              )}
+            </div>
+            <div className="flex items-center justify-between px-1">
+              {moodOptions.map(mood => (
                 <button
-                  key={m}
-                  onClick={() => setWeeklyMood(m)}
+                  key={mood.score}
+                  onClick={() => { void handleDailyMoodSelect(mood.score); }}
+                  disabled={isSavingMood}
                   className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all duration-150 ${
-                    weeklyMood === m
+                    todayMoodEntry?.intensity === mood.score
                       ? 'bg-terracotta/10 scale-110'
                       : 'hover:bg-secondary hover:scale-105'
-                  }`}
-                  aria-label={moodLabels[i]}
+                  } ${isSavingMood ? 'opacity-60 cursor-not-allowed' : ''}`}
+                  aria-label={mood.label}
                 >
-                  <span className="text-[28px]">{m}</span>
+                  <span className="text-[24px]">{mood.emoji}</span>
                   <span className={`text-[10px] transition-colors ${
-                    weeklyMood === m ? 'text-terracotta' : 'text-muted-foreground'
-                  }`}>{moodLabels[i]}</span>
+                    todayMoodEntry?.intensity === mood.score ? 'text-terracotta' : 'text-muted-foreground'
+                  }`}>{mood.label}</span>
                 </button>
               ))}
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-border">
+              <p className="text-[12px] text-muted-foreground mb-2">Daily mood trend (last 14 days)</p>
+              <div className="h-36">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={moodTrendData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                    <XAxis
+                      dataKey="short"
+                      tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      domain={[1, 5]}
+                      ticks={[1, 2, 3, 4, 5]}
+                      tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        background: 'var(--card)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '8px',
+                        fontSize: '12px',
+                        color: 'var(--foreground)',
+                      }}
+                      formatter={(value: number | string) => {
+                        if (typeof value !== 'number') return [value, 'Mood'];
+                        return [moodMetaByScore(value).label, 'Mood'];
+                      }}
+                      labelFormatter={(_, payload) => {
+                        const point = payload?.[0]?.payload as { label: string; moodLabel: string } | undefined;
+                        if (!point) return '';
+                        return `${point.label} · ${point.moodLabel}`;
+                      }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="score"
+                      stroke="#C17A5A"
+                      strokeWidth={2}
+                      connectNulls={false}
+                      dot={{ fill: '#C17A5A', r: 3 }}
+                      activeDot={{ r: 5 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-border">
+              <p className="text-[12px] text-muted-foreground mb-2">Weekly average mood (last 8 weeks)</p>
+              <div className="h-32">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={weeklyAverageData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                    <XAxis
+                      dataKey="weekLabel"
+                      tick={{ fill: 'var(--text-secondary)', fontSize: 10 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      domain={[1, 5]}
+                      ticks={[1, 3, 5]}
+                      tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        background: 'var(--card)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '8px',
+                        fontSize: '12px',
+                        color: 'var(--foreground)',
+                      }}
+                      formatter={(value: number | string) => {
+                        if (typeof value !== 'number') return [value, 'Weekly average'];
+                        return [value.toFixed(1), 'Weekly average'];
+                      }}
+                      labelFormatter={(_, payload) => {
+                        const point = payload?.[0]?.payload as { weekRange: string; count: number } | undefined;
+                        if (!point) return '';
+                        return `${point.weekRange} · ${point.count} check-in${point.count !== 1 ? 's' : ''}`;
+                      }}
+                    />
+                    <Bar dataKey="average" fill="#4A6741" radius={[4, 4, 0, 0]} barSize={18} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           </div>
         </div>
