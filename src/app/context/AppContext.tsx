@@ -13,7 +13,7 @@ import {
   createSessionApi,
   deleteAccountApi,
   deleteLogApi,
-  fakePaymentApi,
+  startProCheckoutApi,
   getHomeworkApi,
   getErrorMessage,
   getLogsApi,
@@ -27,6 +27,7 @@ import {
   updateSessionApi,
   updateHomeworkApi,
   updateLogApi,
+  updatePlanApi,
   updateProfileApi,
 } from '../lib/api';
 
@@ -551,7 +552,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      const response = await fakePaymentApi(nextPlan, token);
+      if (nextPlan === 'PRO') {
+        const response = await startProCheckoutApi(token);
+        if (response.checkoutUrl) {
+          window.location.href = response.checkoutUrl;
+          return;
+        }
+
+        if (response.user) {
+          setAuthUser(response.user);
+          localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(response.user));
+          return;
+        }
+
+        throw new ApiError('Unable to start checkout right now. Please try again.', 500);
+      }
+
+      const response = await updatePlanApi(nextPlan, token);
+      if (!response.user) {
+        throw new ApiError('Failed to update plan. Please try again.', 500);
+      }
       setAuthUser(response.user);
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(response.user));
     },

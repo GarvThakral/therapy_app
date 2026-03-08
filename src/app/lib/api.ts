@@ -96,6 +96,12 @@ export interface ApiCommunityPost {
   replies: ApiCommunityReply[];
 }
 
+export interface BillingResponse {
+  message: string;
+  user?: AuthUser;
+  checkoutUrl?: string;
+}
+
 interface ApiErrorPayload {
   error?: string;
   code?: string;
@@ -211,15 +217,52 @@ export function meApi(token: string) {
   return request<{ user: AuthUser }>("/auth/me", { method: "GET" }, token);
 }
 
-export function fakePaymentApi(plan: PlanType, token: string) {
-  return request<{ message: string; user: AuthUser }>(
+export function updatePlanApi(plan: PlanType, token: string) {
+  return request<BillingResponse>(
     "/billing/fake-payment",
     {
       method: "POST",
-      body: JSON.stringify({ plan }),
+      body: JSON.stringify({ plan, action: "update" }),
     },
     token,
   );
+}
+
+export function startProCheckoutApi(token: string) {
+  return request<BillingResponse>(
+    "/billing/fake-payment",
+    {
+      method: "POST",
+      body: JSON.stringify({ plan: "PRO", action: "start" }),
+    },
+    token,
+  );
+}
+
+export function confirmProCheckoutApi(
+  token: string,
+  payload: { status?: string; paymentId?: string; sessionId?: string; checkoutId?: string; email?: string },
+) {
+  return request<BillingResponse>(
+    "/billing/fake-payment",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        plan: "PRO",
+        action: "confirm",
+        status: payload.status,
+        paymentId: payload.paymentId,
+        sessionId: payload.sessionId,
+        checkoutId: payload.checkoutId,
+        email: payload.email,
+      }),
+    },
+    token,
+  );
+}
+
+export function fakePaymentApi(plan: PlanType, token: string) {
+  return updatePlanApi(plan, token);
 }
 
 export function getLogsApi(token: string, view: "active" | "archive" | "all" = "active") {

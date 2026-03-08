@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router';
 import { useApp } from '../context/AppContext';
 import { SectionHeader } from '../components/SectionHeader';
 import { Moon, Sun, Monitor, Download, Trash2, Crown } from 'lucide-react';
@@ -11,7 +12,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '../components/ui/dialog';
-import { getErrorMessage } from '../lib/api';
+import { confirmProCheckoutApi, getErrorMessage } from '../lib/api';
 import { buildDetailedUserReportPdf } from '../lib/pdf-report';
 
 export function SettingsPage() {
@@ -27,10 +28,15 @@ export function SettingsPage() {
     monthlyEntryCount,
     selectPlan,
     deleteAccount,
+    token,
+    refreshSession,
   } = useApp();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
   const [pdfExportLoading, setPdfExportLoading] = useState(false);
+  const [checkoutConfirming, setCheckoutConfirming] = useState(false);
 
   const toDateTimeInput = (value: Date) => {
     const date = new Date(value);
@@ -99,6 +105,54 @@ export function SettingsPage() {
     URL.revokeObjectURL(url);
     toast('JSON exported.', { duration: 2000 });
   };
+
+  useEffect(() => {
+    if (!token) return;
+
+    const params = new URLSearchParams(location.search);
+    const status = params.get('status') || params.get('payment_status') || undefined;
+    const paymentId = params.get('payment_id') || undefined;
+    const sessionId = params.get('session') || undefined;
+    const checkoutId = params.get('checkout_id') || undefined;
+    const email = params.get('email') || undefined;
+    const hasPaymentSignal = Boolean(status || paymentId || sessionId || checkoutId);
+    if (!hasPaymentSignal) return;
+
+    const clearPaymentQueryParams = () => {
+      const next = new URLSearchParams(location.search);
+      ['status', 'payment_status', 'payment_id', 'session', 'checkout_id', 'email', 'license_key'].forEach(key => next.delete(key));
+      const search = next.toString();
+      navigate(
+        {
+          pathname: location.pathname,
+          search: search ? `?${search}` : '',
+        },
+        { replace: true },
+      );
+    };
+
+    if (status && status !== 'succeeded') {
+      toast('Payment was not completed.', { duration: 3000 });
+      clearPaymentQueryParams();
+      return;
+    }
+
+    if (checkoutConfirming) return;
+    setCheckoutConfirming(true);
+
+    void confirmProCheckoutApi(token, { status, paymentId, sessionId, checkoutId, email })
+      .then(async () => {
+        await refreshSession();
+        toast('Payment successful. Pro is now active.', { duration: 3000 });
+      })
+      .catch(error => {
+        toast(getErrorMessage(error, 'Payment verification failed. Please contact support if charged.'), { duration: 3500 });
+      })
+      .finally(() => {
+        setCheckoutConfirming(false);
+        clearPaymentQueryParams();
+      });
+  }, [checkoutConfirming, location.pathname, location.search, navigate, refreshSession, token]);
 
   return (
     <div className="max-w-2xl mx-auto px-4 lg:px-8 py-6 lg:py-8">
@@ -342,7 +396,7 @@ export function SettingsPage() {
                 {plan === 'PRO' ? 'Pro Plan' : 'Free Plan'}
               </p>
               <p className="text-muted-foreground text-[12px]">
-                {plan === 'PRO' ? '$6/month (fake billing)' : '30 logs/month + core features'}
+                {plan === 'PRO' ? '$6/month (Dodo Payments)' : '30 logs/month + core features'}
               </p>
             </div>
           </div>
@@ -359,17 +413,16 @@ export function SettingsPage() {
                 setSubscriptionLoading(true);
                 try {
                   await selectPlan('PRO');
-                  toast('Fake Pro payment complete.', { duration: 2500 });
                 } catch (error) {
                   toast(getErrorMessage(error, 'Failed to update plan.'), { duration: 3000 });
                 } finally {
                   setSubscriptionLoading(false);
                 }
               }}
-              disabled={subscriptionLoading}
+              disabled={subscriptionLoading || checkoutConfirming}
               className="px-4 py-2 bg-terracotta text-white rounded-lg text-[13px] hover:bg-terracotta/90 transition-all active:translate-y-px disabled:opacity-50"
             >
-              {subscriptionLoading ? 'Processing...' : 'Upgrade to Pro (fake payment)'}
+              {subscriptionLoading || checkoutConfirming ? 'Processing...' : 'Upgrade to Pro'}
             </button>
           )}
           {plan === 'PRO' && (
