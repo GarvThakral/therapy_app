@@ -213,6 +213,18 @@ export function loginApi(payload: { email: string; password: string }) {
   });
 }
 
+export function getGoogleLoginApi(next?: string) {
+  const params = new URLSearchParams({
+    provider: "google",
+    intent: "start",
+  });
+  if (next) {
+    params.set("next", next);
+  }
+
+  return request<{ url: string }>(`/auth/login?${params.toString()}`, { method: "GET" });
+}
+
 export function meApi(token: string) {
   return request<{ user: AuthUser }>("/auth/me", { method: "GET" }, token);
 }

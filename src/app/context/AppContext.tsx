@@ -133,6 +133,7 @@ interface AppState {
   updateSession: (id: string, updates: Partial<Pick<Session, 'date' | 'topics' | 'whatStoodOut' | 'prepItems' | 'postMood' | 'moodWord' | 'completed'>>) => Promise<void>;
   signUp: (payload: { email: string; password: string; name?: string }) => Promise<void>;
   login: (payload: { email: string; password: string }) => Promise<void>;
+  completeGoogleAuth: (authToken: string) => Promise<void>;
   loginDemo: () => void;
   logout: () => void;
   deleteAccount: () => Promise<void>;
@@ -516,6 +517,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     async (payload: { email: string; password: string }) => {
       const response = await loginApi(payload);
       persistAuth(response.token, response.user);
+      setSettings(prev => ({
+        ...prev,
+        displayName: response.user.name || prev.displayName,
+      }));
+    },
+    [persistAuth],
+  );
+
+  const completeGoogleAuth = useCallback(
+    async (authToken: string) => {
+      const response = await meApi(authToken);
+      persistAuth(authToken, response.user);
       setSettings(prev => ({
         ...prev,
         displayName: response.user.name || prev.displayName,
@@ -998,6 +1011,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         updateSession,
         signUp,
         login,
+        completeGoogleAuth,
         loginDemo,
         logout,
         deleteAccount,
