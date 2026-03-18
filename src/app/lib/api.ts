@@ -240,12 +240,12 @@ export function updatePlanApi(plan: PlanType, token: string) {
   );
 }
 
-export function startProCheckoutApi(token: string) {
+export function startProCheckoutApi(token: string, payload?: { returnUrl?: string }) {
   return request<BillingResponse>(
     "/billing/fake-payment",
     {
       method: "POST",
-      body: JSON.stringify({ plan: "PRO", action: "start" }),
+      body: JSON.stringify({ plan: "PRO", action: "start", returnUrl: payload?.returnUrl }),
     },
     token,
   );

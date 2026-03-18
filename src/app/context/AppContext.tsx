@@ -566,7 +566,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (nextPlan === 'PRO') {
-        const response = await startProCheckoutApi(token);
+        const response = await startProCheckoutApi(token, { returnUrl: window.location.href });
         if (response.checkoutUrl) {
           window.location.href = response.checkoutUrl;
           return;
