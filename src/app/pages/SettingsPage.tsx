@@ -425,25 +425,7 @@ export function SettingsPage() {
               {subscriptionLoading || checkoutConfirming ? 'Processing...' : 'Upgrade to Pro'}
             </button>
           )}
-          {plan === 'PRO' && (
-            <button
-              onClick={async () => {
-                setSubscriptionLoading(true);
-                try {
-                  await selectPlan('FREE');
-                  toast('Switched to Free plan.', { duration: 2500 });
-                } catch (error) {
-                  toast(getErrorMessage(error, 'Failed to update plan.'), { duration: 3000 });
-                } finally {
-                  setSubscriptionLoading(false);
-                }
-              }}
-              disabled={subscriptionLoading}
-              className="text-[12px] text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
-            >
-              {subscriptionLoading ? 'Processing...' : 'Switch to Free plan'}
-            </button>
-          )}
+
         </div>
       </section>
 

@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router';
+import { toast } from 'sonner';
 import { useApp } from '../context/AppContext';
 import { SectionHeader } from '../components/SectionHeader';
 import { EmptyState } from '../components/EmptyState';
 import { Lock, Award } from 'lucide-react';
 import { format, subDays } from 'date-fns';
+import { getErrorMessage } from '../lib/api';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   LineChart, Line, CartesianGrid,
@@ -291,6 +293,19 @@ export function MyPatterns() {
 }
 
 function ProOverlay() {
+  const { selectPlan } = useApp();
+  const [isUpgrading, setIsUpgrading] = useState(false);
+
+  async function handleUpgrade() {
+    setIsUpgrading(true);
+    try {
+      await selectPlan('PRO');
+    } catch (error) {
+      toast(getErrorMessage(error, 'Unable to start checkout right now.'), { duration: 3000 });
+      setIsUpgrading(false);
+    }
+  }
+
   return (
     <div className="max-w-4xl mx-auto px-4 lg:px-8 py-6 lg:py-8 relative">
       <div className="mb-8">
@@ -316,8 +331,12 @@ function ProOverlay() {
             <p className="text-muted-foreground text-[14px] mb-4 leading-relaxed">
               See your triggers, themes, homework trends, and mood over time. Patterns take a few weeks to appear — keep logging and they'll show up here.
             </p>
-            <button className="px-6 py-2.5 bg-terracotta text-white rounded-lg text-[14px] hover:bg-terracotta/90 transition-all active:translate-y-px">
-              Upgrade to Pro — $6/month
+            <button
+              onClick={handleUpgrade}
+              disabled={isUpgrading}
+              className="px-6 py-2.5 bg-terracotta text-white rounded-lg text-[14px] hover:bg-terracotta/90 transition-all active:translate-y-px disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {isUpgrading ? 'Redirecting...' : 'Upgrade to Pro — $6/month'}
             </button>
             <p className="text-[11px] text-muted-foreground mt-3">
               or $48/year · cancel anytime
