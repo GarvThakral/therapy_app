@@ -59,7 +59,7 @@ export function QuickLogBar() {
   const selectedType = typeOptions.find(t => t.value === type)!;
 
   return (
-    <div className="bg-card border border-border rounded-lg p-4">
+    <div data-tour-target="log-entry" className="bg-card border border-border rounded-lg p-4">
       {plan === 'FREE' && (
         <p className="text-[12px] text-muted-foreground mb-2">
           Free plan: {monthlyEntryCount}/{planBenefits.maxMonthlyEntries} logs this month.

@@ -91,7 +91,7 @@ export function LandingPage() {
       <section className="max-w-6xl mx-auto px-6 pt-12 md:pt-20 pb-16 md:pb-24">
         <div className="max-w-3xl mx-auto text-center">
           <h1 className="text-[#F0EDE8] mb-6" style={{ fontFamily: "'Playfair Display', serif", fontSize: 'clamp(32px, 5vw, 48px)', lineHeight: '1.15' }}>
-            Everything you want to say in therapy — organized.
+            Everything you want to say in therapy organized.
           </h1>
           <p className="text-[#8A7F75] text-[18px] leading-relaxed mb-10 max-w-2xl mx-auto">
             Log what happens between sessions. Prep what matters. Never leave a session wishing you'd mentioned something.

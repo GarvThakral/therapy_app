@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router';
 import { addDays, format, startOfWeek, endOfWeek, isThisWeek, subWeeks } from 'date-fns';
-import { ArrowRight, CalendarDays, CheckSquare, PenLine } from 'lucide-react';
+import { ArrowRight, CalendarDays, CheckSquare, Crown, PenLine } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { toast } from 'sonner';
 import { useApp, type LogEntry } from '../context/AppContext';
@@ -38,9 +38,12 @@ export function ThisWeek() {
     activeSessionDate,
     addEntry,
     updateEntry,
+    plan,
+    selectPlan,
   } = useApp();
   const [archiveOpen, setArchiveOpen] = React.useState(false);
   const [isSavingMood, setIsSavingMood] = React.useState(false);
+  const [isUpgrading, setIsUpgrading] = React.useState(false);
 
   React.useEffect(() => {
     void loadArchivedEntries();
@@ -175,6 +178,18 @@ export function ThisWeek() {
     }
   };
 
+  const handleUpgrade = async () => {
+    if (isUpgrading) return;
+
+    setIsUpgrading(true);
+    try {
+      await selectPlan('PRO');
+    } catch (error) {
+      toast(getErrorMessage(error, 'Unable to start checkout right now.'), { duration: 3000 });
+      setIsUpgrading(false);
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto px-4 lg:px-8 py-6 lg:py-8">
       <div className="flex flex-col lg:flex-row gap-8">
@@ -199,7 +214,7 @@ export function ThisWeek() {
           </div>
 
           {/* Feed */}
-          <div>
+          <div data-tour-target="logs-history">
             {thisWeekEntries.length > 0 ? (
               <div className="space-y-3">
                 {thisWeekEntries.map(entry => (
@@ -236,7 +251,7 @@ export function ThisWeek() {
         {/* Right sidebar */}
         <div className="w-full lg:w-80 flex-shrink-0 space-y-4">
           {/* Upcoming Session */}
-          <div className="bg-card border border-border rounded-lg p-5">
+          <div data-tour-target="manage-sessions" className="bg-card border border-border rounded-lg p-5">
             <div className="flex items-center gap-2 mb-3">
               <CalendarDays className="w-4 h-4 text-terracotta" strokeWidth={1.5} />
               <h4 className="text-foreground">Upcoming Session</h4>
@@ -414,6 +429,34 @@ export function ThisWeek() {
                 </ResponsiveContainer>
               </div>
             </div>
+          </div>
+
+          <div data-tour-target="upgrade-pro" className="bg-card border border-border rounded-lg p-5">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#00c8ff]/12 flex items-center justify-center text-[#00c8ff] flex-shrink-0">
+                <Crown className="w-4 h-4" strokeWidth={1.5} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="text-foreground">Pro insights</h4>
+                <p className="text-muted-foreground text-[13px] mt-1">
+                  Unlock pattern recognition, deeper trends, and richer insight summaries.
+                </p>
+              </div>
+            </div>
+            {plan !== 'PRO' ? (
+              <button
+                onClick={() => { void handleUpgrade(); }}
+                disabled={isUpgrading}
+                className="mt-4 w-full inline-flex items-center justify-center gap-2 rounded-lg bg-[#00c8ff] px-4 py-2.5 text-[13px] font-medium text-[#03131A] transition-colors hover:bg-[#55d9ff] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isUpgrading ? 'Redirecting...' : 'Upgrade to Pro'}
+              </button>
+            ) : (
+              <div className="mt-4 inline-flex items-center gap-2 rounded-lg border border-[#00c8ff]/35 bg-[#00c8ff]/8 px-3 py-2 text-[12px] text-[#9beeff]">
+                <Crown className="w-3.5 h-3.5" strokeWidth={1.5} />
+                Pro already unlocked
+              </div>
+            )}
           </div>
         </div>
       </div>

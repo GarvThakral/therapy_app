@@ -425,6 +425,11 @@ export function SettingsPage() {
               {subscriptionLoading || checkoutConfirming ? 'Processing...' : 'Upgrade to Pro'}
             </button>
           )}
+          {plan === 'PRO' && (
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-gold/10 text-gold text-[12px]">
+              <Crown className="w-3.5 h-3.5" /> Pro active
+            </div>
+          )}
 
         </div>
       </section>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Outlet, useLocation } from 'react-router';
 import { Menu } from 'lucide-react';
 import { AppSidebar, MobileNav } from './AppSidebar';
+import { TourGuide } from './TourGuide';
 import { useApp } from '../context/AppContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { SessionlyLogo } from './SessionlyLogo';
@@ -46,6 +47,7 @@ export function AppLayout() {
           </AnimatePresence>
         </main>
 
+        <TourGuide />
         <MobileNav />
       </div>
     </div>
