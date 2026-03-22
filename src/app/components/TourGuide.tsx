@@ -81,7 +81,7 @@ function getTooltipPosition(rect: SpotlightRect, tooltipHeight: number, viewport
 
 export function TourGuide() {
   const location = useLocation();
-  const { authUser, plan } = useApp();
+  const { authUser, plan, settings, isProfileLoaded } = useApp();
   const tooltipRef = React.useRef<HTMLDivElement | null>(null);
   const [isOpen, setIsOpen] = React.useState(false);
   const [stepIndex, setStepIndex] = React.useState(0);
@@ -120,7 +120,7 @@ export function TourGuide() {
   const seenFlagKey = authUser ? `${TOUR_FLAG_KEY}:${authUser.id}` : TOUR_FLAG_KEY;
 
   React.useEffect(() => {
-    if (!authUser || location.pathname !== '/app') return;
+    if (!authUser || !isProfileLoaded || !settings.onboarded || location.pathname !== '/app') return;
     if (typeof window === 'undefined') return;
     if (window.localStorage.getItem(seenFlagKey) === 'true') return;
 
@@ -130,7 +130,7 @@ export function TourGuide() {
     }, 350);
 
     return () => window.clearTimeout(timer);
-  }, [authUser, location.pathname, seenFlagKey]);
+  }, [authUser, isProfileLoaded, location.pathname, seenFlagKey, settings.onboarded]);
 
   React.useEffect(() => {
     if (!isOpen || location.pathname !== '/app') return;
@@ -209,7 +209,7 @@ export function TourGuide() {
     );
   }, [isOpen, spotlightRect, stepIndex]);
 
-  if (!isOpen || location.pathname !== '/app' || !spotlightRect || !tooltipPosition) {
+  if (!isOpen || !isProfileLoaded || !settings.onboarded || location.pathname !== '/app' || !spotlightRect || !tooltipPosition) {
     return null;
   }
 

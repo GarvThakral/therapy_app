@@ -55,7 +55,9 @@ export interface ApiHomeworkItem {
 export interface ApiProfile {
   id: string;
   displayName: string;
+  referralSource: string | null;
   therapistName: string | null;
+  usageIntentions: string[];
   sessionFrequency: "weekly" | "biweekly" | "monthly" | "custom" | string;
   sessionDay: string;
   sessionTime: string;

@@ -73,7 +73,9 @@ export interface Session {
 
 export interface UserSettings {
   displayName: string;
+  referralSource: string;
   therapistName: string;
+  usageIntentions: string[];
   sessionFrequency: 'weekly' | 'biweekly' | 'monthly' | 'custom';
   sessionDay: string;
   sessionTime: string;
@@ -114,6 +116,7 @@ interface AppState {
   token: string | null;
   isAuthenticated: boolean;
   isAuthLoading: boolean;
+  isProfileLoaded: boolean;
   isLogsLoading: boolean;
   plan: PlanType;
   planBenefits: PlanBenefits;
@@ -128,6 +131,7 @@ interface AppState {
   startSession: (date?: Date) => Promise<void>;
   selectSession: (sessionId: string | null) => void;
   updateSettings: (updates: Partial<UserSettings>) => void;
+  saveSettings: (updates: Partial<UserSettings>) => Promise<void>;
   setWeeklyMood: (mood: string) => void;
   saveSession: (session: Omit<Session, 'id' | 'number' | 'homework'> & { homeworkItems?: Array<{ text: string; dueDate?: Date }> }) => Promise<void>;
   updateSession: (id: string, updates: Partial<Pick<Session, 'date' | 'topics' | 'whatStoodOut' | 'prepItems' | 'postMood' | 'moodWord' | 'completed'>>) => Promise<void>;
@@ -148,7 +152,9 @@ const DEMO_TOKEN = 'DEMO_TOKEN';
 
 const defaultSettings: UserSettings = {
   displayName: 'Alex',
+  referralSource: '',
   therapistName: '',
+  usageIntentions: [],
   sessionFrequency: 'weekly',
   sessionDay: 'Thursday',
   sessionTime: '10:00',
@@ -299,7 +305,9 @@ function toSettingsFromProfile(profile: ApiProfile, prev: UserSettings): UserSet
   return {
     ...prev,
     displayName: profile.displayName || prev.displayName,
+    referralSource: profile.referralSource || '',
     therapistName: profile.therapistName || '',
+    usageIntentions: profile.usageIntentions || [],
     sessionFrequency: (profile.sessionFrequency as UserSettings['sessionFrequency']) || prev.sessionFrequency,
     sessionDay: profile.sessionDay || prev.sessionDay,
     sessionTime: profile.sessionTime || prev.sessionTime,
@@ -320,7 +328,9 @@ function toSettingsFromProfile(profile: ApiProfile, prev: UserSettings): UserSet
 function toProfilePayload(settings: UserSettings): Partial<ApiProfile> {
   return {
     displayName: settings.displayName,
+    referralSource: settings.referralSource || null,
     therapistName: settings.therapistName || null,
+    usageIntentions: settings.usageIntentions,
     sessionFrequency: settings.sessionFrequency,
     sessionDay: settings.sessionDay,
     sessionTime: settings.sessionTime,
@@ -349,6 +359,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_STORAGE_KEY));
   const [authUser, setAuthUser] = useState<AuthUser | null>(() => getStoredUser());
   const [isAuthLoading, setIsAuthLoading] = useState<boolean>(() => Boolean(localStorage.getItem(TOKEN_STORAGE_KEY)));
+  const [isProfileLoaded, setIsProfileLoaded] = useState<boolean>(() => !Boolean(localStorage.getItem(TOKEN_STORAGE_KEY)));
   const [isLogsLoading, setIsLogsLoading] = useState(false);
   const profileSaveTimeoutRef = useRef<number | null>(null);
 
@@ -395,6 +406,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const persistAuth = useCallback((nextToken: string, user: AuthUser) => {
     setToken(nextToken);
     setAuthUser(user);
+    setIsProfileLoaded(nextToken === DEMO_TOKEN);
     localStorage.setItem(TOKEN_STORAGE_KEY, nextToken);
     localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
   }, []);
@@ -409,6 +421,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setSettings(defaultSettings);
     setActiveSessionId(null);
     setIsAuthLoading(false);
+    setIsProfileLoaded(true);
     localStorage.removeItem(TOKEN_STORAGE_KEY);
     localStorage.removeItem(USER_STORAGE_KEY);
   }, []);
@@ -459,18 +472,31 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [token]);
 
   const loadProfile = useCallback(async () => {
-    if (!token || token === DEMO_TOKEN) return;
+    if (!token || token === DEMO_TOKEN) {
+      setIsProfileLoaded(true);
+      return;
+    }
     try {
       const response = await getProfileApi(token);
       setSettings(prev => toSettingsFromProfile(response.profile, prev));
     } catch {
       // keep local defaults
+    } finally {
+      setIsProfileLoaded(true);
     }
   }, [token]);
 
   const refreshSession = useCallback(async () => {
     if (!token) {
       setIsAuthLoading(false);
+      setIsProfileLoaded(true);
+      return;
+    }
+
+    if (token === DEMO_TOKEN) {
+      setAuthUser(getStoredUser() ?? demoUser);
+      setIsAuthLoading(false);
+      setIsProfileLoaded(true);
       return;
     }
 
@@ -508,6 +534,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setSettings(prev => ({
         ...prev,
         displayName: response.user.name || prev.displayName,
+        onboarded: false,
       }));
     },
     [persistAuth],
@@ -727,6 +754,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
 
     profileSaveTimeoutRef.current = window.setTimeout(() => {
+      profileSaveTimeoutRef.current = null;
       void updateProfileApi(authToken, toProfilePayload(nextSettings)).catch(() => {
         // keep local state if save fails
       });
@@ -740,6 +768,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return next;
     });
   }, [queueProfileSave, token]);
+
+  const saveSettings = useCallback(async (updates: Partial<UserSettings>) => {
+    let nextSettings: UserSettings | null = null;
+
+    setSettings(prev => {
+      nextSettings = { ...prev, ...updates };
+      return nextSettings;
+    });
+
+    if (!nextSettings) return;
+    if (!token) {
+      throw new ApiError('Session expired. Please log in again.', 401);
+    }
+    if (token === DEMO_TOKEN) return;
+
+    if (profileSaveTimeoutRef.current) {
+      window.clearTimeout(profileSaveTimeoutRef.current);
+      profileSaveTimeoutRef.current = null;
+    }
+
+    const response = await updateProfileApi(token, toProfilePayload(nextSettings));
+    setSettings(prev => toSettingsFromProfile(response.profile, { ...prev, ...nextSettings }));
+  }, [token]);
 
   const setWeeklyMood = useCallback((mood: string) => {
     setWeeklyMoodState(mood);
@@ -992,6 +1043,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         token,
         isAuthenticated: Boolean(token && authUser),
         isAuthLoading,
+        isProfileLoaded,
         isLogsLoading,
         plan,
         planBenefits,
@@ -1006,6 +1058,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         startSession,
         selectSession,
         updateSettings,
+        saveSettings,
         setWeeklyMood,
         saveSession,
         updateSession,

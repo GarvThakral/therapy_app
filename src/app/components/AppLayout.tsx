@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Outlet, useLocation } from 'react-router';
 import { Menu } from 'lucide-react';
 import { AppSidebar, MobileNav } from './AppSidebar';
+import { OnboardingFlow } from './OnboardingFlow';
 import { TourGuide } from './TourGuide';
 import { useApp } from '../context/AppContext';
 import { motion, AnimatePresence } from 'motion/react';
@@ -47,6 +48,7 @@ export function AppLayout() {
           </AnimatePresence>
         </main>
 
+        <OnboardingFlow />
         <TourGuide />
         <MobileNav />
       </div>

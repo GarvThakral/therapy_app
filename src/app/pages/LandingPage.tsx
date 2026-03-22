@@ -96,13 +96,38 @@ export function LandingPage() {
           <p className="text-[#8A7F75] text-[18px] leading-relaxed mb-10 max-w-2xl mx-auto">
             Log what happens between sessions. Prep what matters. Never leave a session wishing you'd mentioned something.
           </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
+          <div className="flex items-center justify-center">
             <Link to="/auth?mode=signup&plan=free" className="w-full sm:w-auto text-center px-6 py-3 bg-[#C17A5A] text-white rounded-lg text-[15px] hover:bg-[#C17A5A]/90 transition-all active:translate-y-px">
               Start for free
             </Link>
-            <a href="#how-it-works" className="w-full sm:w-auto text-center px-6 py-3 border border-[#2E2A25] text-[#F0EDE8] rounded-lg text-[15px] hover:border-[#8A7F75] transition-all">
-              See how it works
-            </a>
+          </div>
+
+          <div className="mt-10 md:mt-12 max-w-4xl mx-auto text-left">
+            <div className="mb-4 text-center">
+              <p className="text-[12px] uppercase tracking-[0.28em] text-[#C17A5A]/80 mb-3">
+                See how it works
+              </p>
+              <h2
+                className="text-[#F0EDE8]"
+                style={{ fontFamily: "'Playfair Display', serif", fontSize: 'clamp(24px, 4vw, 34px)', lineHeight: '1.15' }}
+              >
+                Watch the product demo before you start
+              </h2>
+            </div>
+
+            <div className="rounded-[28px] border border-[#2E2A25] bg-[#231F1B] p-3 md:p-4 shadow-[0_24px_80px_rgba(0,0,0,0.22)]">
+              <div className="overflow-hidden rounded-[20px] border border-[#2E2A25] bg-black aspect-video">
+                <iframe
+                  className="h-full w-full"
+                  src="https://www.youtube-nocookie.com/embed/XxPXAK_WozE?rel=0"
+                  title="Sessionly product demo"
+                  loading="lazy"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  allowFullScreen
+                />
+              </div>
+            </div>
           </div>
         </div>
 
