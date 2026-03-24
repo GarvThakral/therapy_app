@@ -155,15 +155,15 @@ function TileButton({
       onClick={onClick}
       className={`group relative min-h-[92px] rounded-[22px] border px-5 py-4 text-left transition-all duration-300 ${
         selected
-          ? 'border-[#00c8ff]/70 bg-[#0b1823] text-white shadow-[0_0_0_1px_rgba(0,200,255,0.18),0_16px_40px_rgba(0,200,255,0.12)]'
-          : 'border-white/10 bg-white/[0.03] text-white/84 hover:border-[#00c8ff]/35 hover:bg-white/[0.05]'
+          ? 'border-terracotta/60 bg-terracotta/10 text-foreground shadow-[0_0_0_1px_rgba(193,122,90,0.18),0_16px_40px_rgba(0,0,0,0.18)]'
+          : 'border-border bg-card/70 text-foreground hover:border-terracotta/35 hover:bg-secondary/35'
       }`}
     >
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[17px] leading-tight">{label}</p>
           {description ? (
-            <p className="mt-2 text-[13px] leading-5 text-white/45">
+            <p className="mt-2 text-[13px] leading-5 text-muted-foreground">
               {description}
             </p>
           ) : null}
@@ -171,15 +171,18 @@ function TileButton({
         <span
           className={`mt-0.5 inline-flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border transition-all ${
             selected
-              ? 'border-[#00c8ff] bg-[#00c8ff] text-[#04111b]'
-              : 'border-white/15 bg-transparent text-transparent group-hover:border-[#00c8ff]/40'
+              ? 'border-terracotta bg-terracotta text-white'
+              : 'border-border bg-transparent text-transparent group-hover:border-terracotta/40'
           }`}
         >
           <Check className="h-3.5 w-3.5" strokeWidth={2.3} />
         </span>
       </div>
       {multi ? (
-        <span className="mt-4 inline-flex text-[11px] uppercase tracking-[0.24em] text-white/28">
+        <span
+          className="mt-4 inline-flex text-[11px] uppercase tracking-[0.24em] text-muted-foreground"
+          style={{ fontFamily: "'JetBrains Mono', monospace" }}
+        >
           Multi-select
         </span>
       ) : null}
@@ -381,22 +384,21 @@ export function OnboardingFlow() {
 
   return (
     <div
-      className="fixed inset-0 z-[150] overflow-y-auto text-white"
-      style={{ fontFamily: "'Syne', 'Inter', sans-serif" }}
+      className="fixed inset-0 z-[150] overflow-y-auto bg-background text-foreground"
     >
-      <div className="absolute inset-0 bg-[#05090f]" />
+      <div className="absolute inset-0 bg-background" />
       <div
         aria-hidden="true"
         className="absolute inset-0"
         style={{
-          background: 'radial-gradient(circle at 14% 18%, rgba(0,200,255,0.18), transparent 30%), radial-gradient(circle at 82% 12%, rgba(193,122,90,0.16), transparent 28%), linear-gradient(180deg, rgba(255,255,255,0.03), transparent 40%)',
+          background: 'radial-gradient(circle at 14% 18%, rgba(193,122,90,0.14), transparent 30%), radial-gradient(circle at 82% 12%, rgba(212,168,83,0.1), transparent 28%), linear-gradient(180deg, rgba(255,255,255,0.03), transparent 40%)',
         }}
       />
 
       <div className="relative flex min-h-screen flex-col">
-        <div className="h-[3px] w-full bg-white/8">
+        <div className="h-[3px] w-full bg-border/50">
           <motion.div
-            className="h-full bg-[#00c8ff]"
+            className="h-full bg-terracotta"
             animate={{ width: `${progress}%` }}
             transition={{ duration: 0.3, ease: 'easeOut' }}
           />
@@ -409,7 +411,7 @@ export function OnboardingFlow() {
                 <button
                   type="button"
                   onClick={goBack}
-                  className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-white transition-colors hover:border-[#00c8ff]/35 hover:bg-white/[0.08]"
+                  className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-border bg-card/80 text-foreground transition-colors hover:border-terracotta/35 hover:bg-secondary"
                   aria-label="Go back"
                 >
                   <ArrowLeft className="h-4 w-4" strokeWidth={2.1} />
@@ -419,7 +421,10 @@ export function OnboardingFlow() {
               )}
 
               {step < FINAL_STEP_INDEX ? (
-                <div className="text-right text-[12px] tracking-[0.18em] text-white/35 uppercase">
+                <div
+                  className="text-right text-[12px] tracking-[0.18em] text-muted-foreground uppercase"
+                  style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                >
                   Step {step + 1} of {TOTAL_STEPS}
                 </div>
               ) : (
@@ -427,7 +432,7 @@ export function OnboardingFlow() {
               )}
             </div>
 
-            <div className="rounded-[32px] border border-white/10 bg-white/[0.035] p-6 shadow-[0_30px_120px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-8">
+            <div className="rounded-[32px] border border-border bg-card/92 p-6 shadow-[0_30px_120px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-8">
               <AnimatePresence mode="wait" initial={false}>
                 <motion.div
                   key={step}
@@ -438,20 +443,23 @@ export function OnboardingFlow() {
                 >
                   {step === 0 ? (
                     <div className="flex min-h-[540px] flex-col items-center justify-center text-center sm:min-h-[560px]">
-                      <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#00c8ff]/20 bg-[#00c8ff]/10 px-4 py-2 text-[12px] uppercase tracking-[0.26em] text-[#82e9ff]">
-                        <Sparkles className="h-3.5 w-3.5" strokeWidth={2} />
+                      <div
+                        className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-secondary px-4 py-2 text-[12px] uppercase tracking-[0.26em] text-muted-foreground"
+                        style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                      >
+                        <Sparkles className="h-3.5 w-3.5 text-terracotta" strokeWidth={2} />
                         Sessionly setup
                       </div>
-                      <h1 className="max-w-[11ch] text-[42px] leading-[0.94] text-white sm:text-[64px]">
+                      <h1 className="max-w-[11ch] text-[42px] leading-[0.94] text-foreground sm:text-[64px]">
                         Let&apos;s set up your space.
                       </h1>
-                      <p className="mt-6 max-w-[560px] text-[16px] leading-7 text-white/55 sm:text-[18px]">
+                      <p className="mt-6 max-w-[560px] text-[16px] leading-7 text-muted-foreground sm:text-[18px]">
                         A few quick questions so Sessionly works the way you think.
                       </p>
                       <button
                         type="button"
                         onClick={goNext}
-                        className="mt-12 inline-flex min-h-[52px] items-center gap-2 rounded-full bg-[#00c8ff] px-7 text-[15px] font-semibold text-[#04111b] transition-colors hover:bg-[#51dcff]"
+                        className="mt-12 inline-flex min-h-[52px] items-center gap-2 rounded-full bg-terracotta px-7 text-[15px] font-medium text-white transition-colors hover:bg-terracotta/90"
                       >
                         Begin
                         <ArrowRight className="h-4 w-4" strokeWidth={2.2} />
@@ -461,9 +469,14 @@ export function OnboardingFlow() {
 
                   {step === 1 ? (
                     <div className="min-h-[540px]">
-                      <p className="text-[12px] uppercase tracking-[0.24em] text-white/35">Getting context</p>
+                      <p
+                        className="text-[12px] uppercase tracking-[0.24em] text-muted-foreground"
+                        style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                      >
+                        Getting context
+                      </p>
                       <h2 className="mt-5 text-[34px] leading-tight sm:text-[46px]">Where did you hear about us?</h2>
-                      <p className="mt-3 max-w-[520px] text-[16px] leading-7 text-white/45">
+                      <p className="mt-3 max-w-[520px] text-[16px] leading-7 text-muted-foreground">
                         This helps us understand which channels are actually bringing the right users in.
                       </p>
 
@@ -482,14 +495,23 @@ export function OnboardingFlow() {
 
                   {step === 2 ? (
                     <div className="min-h-[540px]">
-                      <p className="text-[12px] uppercase tracking-[0.24em] text-white/35">Personalization</p>
+                      <p
+                        className="text-[12px] uppercase tracking-[0.24em] text-muted-foreground"
+                        style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                      >
+                        Personalization
+                      </p>
                       <h2 className="mt-5 text-[34px] leading-tight sm:text-[46px]">Who are you working with?</h2>
-                      <p className="mt-3 max-w-[520px] text-[16px] leading-7 text-white/45">
+                      <p className="mt-3 max-w-[520px] text-[16px] leading-7 text-muted-foreground">
                         This helps us personalize your session logs.
                       </p>
 
                       <div className="mt-12 max-w-[520px]">
-                        <label htmlFor="therapist-name" className="mb-3 block text-[13px] uppercase tracking-[0.22em] text-white/35">
+                        <label
+                          htmlFor="therapist-name"
+                          className="mb-3 block text-[13px] uppercase tracking-[0.22em] text-muted-foreground"
+                          style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                        >
                           Therapist&apos;s name
                         </label>
                         <input
@@ -498,7 +520,7 @@ export function OnboardingFlow() {
                           value={draft.therapistName}
                           onChange={event => updateDraft({ therapistName: event.target.value })}
                           autoFocus
-                          className="min-h-[56px] w-full rounded-[20px] border border-white/12 bg-[#0b1118] px-5 text-[18px] text-white outline-none transition-colors placeholder:text-white/24 focus:border-[#00c8ff]/65"
+                          className="min-h-[56px] w-full rounded-[20px] border border-border bg-input-background px-5 text-[18px] text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-terracotta/60"
                           placeholder="Dr. Rivera"
                         />
                       </div>
@@ -507,7 +529,12 @@ export function OnboardingFlow() {
 
                   {step === 3 ? (
                     <div className="min-h-[540px]">
-                      <p className="text-[12px] uppercase tracking-[0.24em] text-white/35">Your cadence</p>
+                      <p
+                        className="text-[12px] uppercase tracking-[0.24em] text-muted-foreground"
+                        style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                      >
+                        Your cadence
+                      </p>
                       <h2 className="mt-5 text-[34px] leading-tight sm:text-[46px]">How often do you attend therapy?</h2>
                       <div className="mt-10 grid grid-cols-1 gap-3 sm:grid-cols-2">
                         {FREQUENCY_OPTIONS.map(option => (
@@ -525,9 +552,14 @@ export function OnboardingFlow() {
 
                   {step === 4 ? (
                     <div className="min-h-[540px]">
-                      <p className="text-[12px] uppercase tracking-[0.24em] text-white/35">What matters most</p>
+                      <p
+                        className="text-[12px] uppercase tracking-[0.24em] text-muted-foreground"
+                        style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                      >
+                        What matters most
+                      </p>
                       <h2 className="mt-5 text-[34px] leading-tight sm:text-[46px]">How do you plan on using Sessionly?</h2>
-                      <p className="mt-3 max-w-[520px] text-[16px] leading-7 text-white/45">
+                      <p className="mt-3 max-w-[520px] text-[16px] leading-7 text-muted-foreground">
                         Pick the jobs you want this space to do for you. You can change these later.
                       </p>
 
@@ -547,35 +579,46 @@ export function OnboardingFlow() {
 
                   {step === 5 ? (
                     <div className="min-h-[540px]">
-                      <p className="text-[12px] uppercase tracking-[0.24em] text-white/35">One useful nudge</p>
+                      <p
+                        className="text-[12px] uppercase tracking-[0.24em] text-muted-foreground"
+                        style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                      >
+                        One useful nudge
+                      </p>
                       <h2 className="mt-5 text-[34px] leading-tight sm:text-[46px]">When&apos;s your next session?</h2>
-                      <p className="mt-3 max-w-[560px] text-[16px] leading-7 text-white/45">
+                      <p className="mt-3 max-w-[560px] text-[16px] leading-7 text-muted-foreground">
                         Optional, but worth it. We&apos;ll use this to anchor the next session context and reminders.
                       </p>
 
                       <div className="mt-12 grid grid-cols-1 gap-4 md:grid-cols-[1.2fr,0.8fr]">
-                        <label className="rounded-[22px] border border-white/10 bg-white/[0.03] p-5">
-                          <span className="mb-3 flex items-center gap-2 text-[13px] uppercase tracking-[0.22em] text-white/35">
-                            <CalendarDays className="h-4 w-4" strokeWidth={1.8} />
+                        <label className="rounded-[22px] border border-border bg-card/70 p-5">
+                          <span
+                            className="mb-3 flex items-center gap-2 text-[13px] uppercase tracking-[0.22em] text-muted-foreground"
+                            style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                          >
+                            <CalendarDays className="h-4 w-4 text-terracotta" strokeWidth={1.8} />
                             Date
                           </span>
                           <input
                             type="date"
                             value={draft.nextSessionDate}
                             onChange={event => updateDraft({ nextSessionDate: event.target.value })}
-                            className="min-h-[52px] w-full rounded-[16px] border border-white/12 bg-[#0b1118] px-4 text-[17px] text-white outline-none focus:border-[#00c8ff]/65"
+                            className="min-h-[52px] w-full rounded-[16px] border border-border bg-input-background px-4 text-[17px] text-foreground outline-none focus:border-terracotta/60"
                           />
                         </label>
 
-                        <label className="rounded-[22px] border border-white/10 bg-white/[0.03] p-5">
-                          <span className="mb-3 block text-[13px] uppercase tracking-[0.22em] text-white/35">
+                        <label className="rounded-[22px] border border-border bg-card/70 p-5">
+                          <span
+                            className="mb-3 block text-[13px] uppercase tracking-[0.22em] text-muted-foreground"
+                            style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                          >
                             Time
                           </span>
                           <input
                             type="time"
                             value={draft.nextSessionTime}
                             onChange={event => updateDraft({ nextSessionTime: event.target.value })}
-                            className="min-h-[52px] w-full rounded-[16px] border border-white/12 bg-[#0b1118] px-4 text-[17px] text-white outline-none focus:border-[#00c8ff]/65"
+                            className="min-h-[52px] w-full rounded-[16px] border border-border bg-input-background px-4 text-[17px] text-foreground outline-none focus:border-terracotta/60"
                           />
                         </label>
                       </div>
@@ -584,14 +627,19 @@ export function OnboardingFlow() {
 
                   {step === FINAL_STEP_INDEX ? (
                     <div className="flex min-h-[540px] flex-col items-center justify-center text-center sm:min-h-[560px]">
-                      <div className="mb-6 inline-flex h-16 w-16 items-center justify-center rounded-full border border-[#00c8ff]/25 bg-[#00c8ff]/12 text-[#8cecff]">
+                      <div className="mb-6 inline-flex h-16 w-16 items-center justify-center rounded-full border border-terracotta/25 bg-terracotta/10 text-terracotta">
                         <Sparkles className="h-7 w-7" strokeWidth={1.9} />
                       </div>
-                      <p className="text-[12px] uppercase tracking-[0.26em] text-white/35">Ready</p>
+                      <p
+                        className="text-[12px] uppercase tracking-[0.26em] text-muted-foreground"
+                        style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                      >
+                        Ready
+                      </p>
                       <h2 className="mt-4 text-[38px] leading-tight sm:text-[58px]">
                         You&apos;re all set, {firstName}.
                       </h2>
-                      <p className="mt-5 max-w-[560px] text-[16px] leading-7 text-white/52 sm:text-[18px]">
+                      <p className="mt-5 max-w-[560px] text-[16px] leading-7 text-muted-foreground sm:text-[18px]">
                         Your space is ready. Start by logging today&apos;s session or wait until after your next one.
                       </p>
 
@@ -600,7 +648,7 @@ export function OnboardingFlow() {
                           type="button"
                           onClick={() => { void completeOnboarding('log'); }}
                           disabled={isSaving}
-                          className="min-h-[54px] rounded-full bg-[#00c8ff] px-6 text-[15px] font-semibold text-[#04111b] transition-colors hover:bg-[#51dcff] disabled:cursor-not-allowed disabled:opacity-55"
+                          className="min-h-[54px] rounded-full bg-terracotta px-6 text-[15px] font-medium text-white transition-colors hover:bg-terracotta/90 disabled:cursor-not-allowed disabled:opacity-55"
                         >
                           {isSaving ? 'Finishing...' : 'Log a session now'}
                         </button>
@@ -608,7 +656,7 @@ export function OnboardingFlow() {
                           type="button"
                           onClick={() => { void completeOnboarding('later'); }}
                           disabled={isSaving}
-                          className="min-h-[54px] rounded-full border border-white/10 bg-white/[0.04] px-6 text-[15px] text-white transition-colors hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-55"
+                          className="min-h-[54px] rounded-full border border-border bg-secondary/30 px-6 text-[15px] text-foreground transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-55"
                         >
                           I&apos;ll come back later
                         </button>
@@ -619,9 +667,9 @@ export function OnboardingFlow() {
               </AnimatePresence>
 
               {step < FINAL_STEP_INDEX ? (
-                <div className="mt-6 border-t border-white/8 pt-5">
+                <div className="mt-6 border-t border-border pt-5">
                   {showValidation && validationMessage ? (
-                    <p className="mb-4 text-[13px] text-[#ff9e9e]">
+                    <p className="mb-4 text-[13px] text-destructive">
                       {validationMessage}
                     </p>
                   ) : (
@@ -629,7 +677,7 @@ export function OnboardingFlow() {
                   )}
 
                   <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="text-[12px] text-white/35">
+                    <div className="text-[12px] text-muted-foreground">
                       {step === 5 ? 'Optional step. You can always schedule this later.' : 'Required to continue.'}
                     </div>
 
@@ -641,8 +689,8 @@ export function OnboardingFlow() {
                         disabled={isSaving}
                         className={`inline-flex min-h-[52px] w-full items-center justify-center gap-2 rounded-full px-6 text-[15px] font-semibold transition-all sm:w-auto ${
                           validationMessage
-                            ? 'bg-white/10 text-white/35'
-                            : 'bg-[#00c8ff] text-[#04111b] hover:bg-[#51dcff]'
+                            ? 'bg-secondary text-muted-foreground'
+                            : 'bg-terracotta text-white hover:bg-terracotta/90'
                         } ${isSaving ? 'cursor-not-allowed opacity-55' : ''}`}
                       >
                         {isSaving ? 'Saving...' : step === 5 ? 'Finish setup' : 'Continue'}
@@ -654,7 +702,7 @@ export function OnboardingFlow() {
                           type="button"
                           onClick={handleSkipSession}
                           disabled={isSaving}
-                          className="text-[13px] text-white/35 transition-colors hover:text-white/62 disabled:opacity-50"
+                          className="text-[13px] text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
                         >
                           Skip for now
                         </button>

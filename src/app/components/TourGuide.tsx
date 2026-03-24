@@ -239,8 +239,7 @@ export function TourGuide() {
       <button
         type="button"
         onClick={closeTour}
-        className="fixed right-4 top-4 inline-flex items-center gap-2 rounded-full border border-[#00c8ff]/35 bg-[#07141c]/92 px-4 py-2 text-[12px] font-medium text-[#9beeff] shadow-[0_10px_40px_rgba(0,0,0,0.35)] transition-colors hover:bg-[#0d1f2a]"
-        style={{ fontFamily: "'Syne', 'Inter', sans-serif" }}
+        className="fixed right-4 top-4 inline-flex items-center gap-2 rounded-full border border-border bg-card/95 px-4 py-2 text-[12px] font-medium text-foreground shadow-[0_10px_40px_rgba(0,0,0,0.35)] transition-colors hover:bg-secondary"
       >
         <X className="h-3.5 w-3.5" strokeWidth={1.8} />
         Skip Tour
@@ -255,8 +254,8 @@ export function TourGuide() {
           width: spotlightRect.width,
           height: spotlightRect.height,
           borderRadius: spotlightRect.radius,
-          boxShadow: '0 0 0 9999px rgba(3, 10, 15, 0.82)',
-          border: '1px solid rgba(0, 200, 255, 0.55)',
+          boxShadow: '0 0 0 9999px rgba(26, 24, 20, 0.82)',
+          border: '1px solid rgba(193, 122, 90, 0.58)',
           background: 'transparent',
           transition: 'top 300ms ease, left 300ms ease, width 300ms ease, height 300ms ease, border-radius 300ms ease',
         }}
@@ -264,29 +263,34 @@ export function TourGuide() {
 
       <div
         ref={tooltipRef}
-        className="fixed rounded-[22px] border border-[#00c8ff]/25 bg-[#07141c]/96 p-5 text-white shadow-[0_24px_80px_rgba(0,0,0,0.45)]"
+        className="fixed rounded-[22px] border border-border bg-card/95 p-5 text-foreground shadow-[0_24px_80px_rgba(0,0,0,0.45)]"
         style={{
           top: tooltipPosition.top,
           left: tooltipPosition.left,
           width: tooltipPosition.width,
           transition: 'top 300ms ease, left 300ms ease, opacity 300ms ease, transform 300ms ease',
-          fontFamily: "'Syne', 'Inter', sans-serif",
           backdropFilter: 'blur(12px)',
         }}
       >
         <div className="mb-3 flex items-center justify-between gap-3">
-          <span className="rounded-full border border-[#00c8ff]/25 bg-[#00c8ff]/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8be9ff]">
+          <span
+            className="rounded-full border border-border bg-secondary px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.22em] text-muted-foreground"
+            style={{ fontFamily: "'JetBrains Mono', monospace" }}
+          >
             Step {stepIndex + 1} / {steps.length}
           </span>
-          <span className="text-[11px] text-[#78b9ca]">
+          <span className="text-[11px] text-muted-foreground">
             Onboarding tour
           </span>
         </div>
 
-        <h3 className="mb-2 text-[22px] font-semibold leading-tight text-white">
+        <h3
+          className="mb-2 text-[22px] leading-tight text-foreground"
+          style={{ fontFamily: "'Playfair Display', serif" }}
+        >
           {currentStep.title}
         </h3>
-        <p className="text-[14px] leading-6 text-[#d2ecf4]">
+        <p className="text-[14px] leading-6 text-muted-foreground">
           {currentStep.description}
         </p>
 
@@ -295,7 +299,7 @@ export function TourGuide() {
             type="button"
             onClick={goPrev}
             disabled={stepIndex === 0}
-            className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-2 text-[13px] text-[#d2ecf4] transition-colors hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-35"
+            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-secondary/30 px-3 py-2 text-[13px] text-foreground transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-35"
           >
             <ChevronLeft className="h-4 w-4" strokeWidth={1.8} />
             Prev
@@ -304,7 +308,7 @@ export function TourGuide() {
           <button
             type="button"
             onClick={goNext}
-            className="inline-flex items-center gap-1.5 rounded-full bg-[#00c8ff] px-4 py-2 text-[13px] font-semibold text-[#04131b] transition-colors hover:bg-[#56daff]"
+            className="inline-flex items-center gap-1.5 rounded-full bg-terracotta px-4 py-2 text-[13px] font-medium text-white transition-colors hover:bg-terracotta/90"
           >
             {stepIndex === steps.length - 1 ? 'Done' : 'Next'}
             {stepIndex !== steps.length - 1 && <ChevronRight className="h-4 w-4" strokeWidth={1.8} />}
