@@ -29,7 +29,7 @@ export function Blog() {
           <SessionlyLogo size={32} showWordmark wordmarkSize={20} wordmarkClassName="text-[#F0EDE8]" />
         </Link>
         <div className="flex items-center gap-4">
-          <Link to="/app" className="text-[14px] text-[#8A7F75] hover:text-[#F0EDE8] transition-colors">
+          <Link to="/auth?mode=login" className="text-[14px] text-[#8A7F75] hover:text-[#F0EDE8] transition-colors">
             Log in
           </Link>
           <Link to="/onboarding" className="px-4 py-2 bg-[#C17A5A] text-white rounded-lg text-[14px] hover:bg-[#C17A5A]/90 transition-all active:translate-y-px">

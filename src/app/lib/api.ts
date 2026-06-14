@@ -231,6 +231,13 @@ export function meApi(token: string) {
   return request<{ user: AuthUser }>("/auth/me", { method: "GET" }, token);
 }
 
+export function submitContactApi(payload: { name?: string; email: string; topic: string; message: string }) {
+  return request<{ ok: boolean }>("/contact", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 export function updatePlanApi(plan: PlanType, token: string) {
   return request<BillingResponse>(
     "/billing/fake-payment",

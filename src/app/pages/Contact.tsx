@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { Mail, MessageCircle, Shield, Send } from 'lucide-react';
 import { SessionlyLogo } from '../components/SessionlyLogo';
 import { toast } from 'sonner';
+import { submitContactApi, getErrorMessage } from '../lib/api';
 
 const topics = [
   'General question',
@@ -20,15 +21,38 @@ export function Contact() {
   const [topic, setTopic] = useState('General question');
   const [message, setMessage] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [sending, setSending] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !message.trim()) {
       toast.error('Please fill in your email and message.');
       return;
     }
-    setSubmitted(true);
-    toast.success('Message sent! We\'ll get back to you within 48 hours.');
+
+    setSending(true);
+    try {
+      await submitContactApi({
+        name: name.trim() || undefined,
+        email: email.trim(),
+        topic,
+        message: message.trim(),
+      });
+      setSubmitted(true);
+      toast.success('Message sent! We\'ll get back to you within 48 hours.');
+    } catch (error) {
+      // Network/server problem — fall back to the user's email client so the
+      // message still reaches us instead of silently failing.
+      const subject = encodeURIComponent(`[${topic}] Sessionly contact`);
+      const body = encodeURIComponent(`${message.trim()}\n\n— ${name.trim() || 'Someone'} (${email.trim()})`);
+      window.location.href = `mailto:hello@sessionly.app?subject=${subject}&body=${body}`;
+      setSubmitted(true);
+      toast.message('Opening your email app to send this message.', {
+        description: getErrorMessage(error, "We couldn't reach the server, so we prepared an email for you."),
+      });
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -126,9 +150,10 @@ export function Contact() {
 
                 <button
                   type="submit"
-                  className="flex items-center gap-2 px-6 py-3 bg-[#C17A5A] text-white rounded-lg text-[14px] hover:bg-[#C17A5A]/90 transition-all active:translate-y-px"
+                  disabled={sending}
+                  className="flex items-center gap-2 px-6 py-3 bg-[#C17A5A] text-white rounded-lg text-[14px] hover:bg-[#C17A5A]/90 transition-all active:translate-y-px disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Send className="w-4 h-4" /> Send message
+                  <Send className="w-4 h-4" /> {sending ? 'Sending...' : 'Send message'}
                 </button>
               </form>
             )}
