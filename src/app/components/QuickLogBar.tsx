@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Plus } from 'lucide-react';
+import { Send, Plus, Mic, Square } from 'lucide-react';
 import { IntensityDots } from './IntensityDots';
 import { useApp } from '../context/AppContext';
 import type { EntryType } from '../context/AppContext';
@@ -21,12 +21,46 @@ export function QuickLogBar() {
   const [intensity, setIntensity] = useState(3);
   const [addToPrep, setAddToPrep] = useState(false);
   const [typeOpen, setTypeOpen] = useState(false);
+  const [listening, setListening] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const recognitionRef = useRef<any>(null);
   const { run } = useActionRateLimit(700);
 
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
+
+  useEffect(() => () => {
+    try { recognitionRef.current?.stop(); } catch { /* ignore */ }
+  }, []);
+
+  const toggleVoice = () => {
+    if (listening) {
+      try { recognitionRef.current?.stop(); } catch { /* ignore */ }
+      setListening(false);
+      return;
+    }
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) {
+      toast("Voice input isn't supported in this browser. Try Chrome or Edge.", { duration: 3000 });
+      return;
+    }
+    const rec = new SR();
+    rec.lang = 'en-US';
+    rec.interimResults = true;
+    rec.continuous = false;
+    const base = text.trim() ? text.trim() + ' ' : '';
+    rec.onresult = (e: any) => {
+      let transcript = '';
+      for (let i = 0; i < e.results.length; i++) transcript += e.results[i][0].transcript;
+      setText((base + transcript).replace(/^\s+/, ''));
+    };
+    rec.onerror = () => setListening(false);
+    rec.onend = () => setListening(false);
+    recognitionRef.current = rec;
+    setListening(true);
+    try { rec.start(); } catch { setListening(false); }
+  };
 
   const handleSubmit = async () => {
     if (!text.trim()) return;
@@ -85,6 +119,10 @@ export function QuickLogBar() {
           />
         </div>
       </div>
+      <div className="flex items-center gap-1.5 mt-1 text-[11px] text-muted-foreground">
+        <Mic className="w-3 h-3" />
+        <span>Type it, or tap the mic to speak</span>
+      </div>
       <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
         <div className="flex items-center gap-4">
           <div className="relative">
@@ -131,14 +169,26 @@ export function QuickLogBar() {
             <span className="hidden sm:inline">Prep</span>
           </button>
         </div>
-        <button
-          onClick={() => { void handleSubmit(); }}
-          disabled={!text.trim()}
-          className="flex items-center gap-1.5 px-4 py-1.5 bg-terracotta text-white rounded-md hover:bg-terracotta/90 transition-all duration-150 active:translate-y-px disabled:opacity-40 disabled:cursor-not-allowed text-[14px]"
-        >
-          Save
-          <Send className="w-3.5 h-3.5" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={toggleVoice}
+            title={listening ? 'Stop dictation' : 'Dictate your log'}
+            aria-label={listening ? 'Stop dictation' : 'Dictate your log'}
+            className={`flex items-center justify-center w-9 h-9 rounded-full transition-all ${
+              listening ? 'bg-destructive text-white animate-pulse' : 'bg-terracotta/10 text-terracotta hover:bg-terracotta/20'
+            }`}
+          >
+            {listening ? <Square className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+          </button>
+          <button
+            onClick={() => { void handleSubmit(); }}
+            disabled={!text.trim()}
+            className="flex items-center gap-1.5 px-4 py-1.5 bg-terracotta text-white rounded-md hover:bg-terracotta/90 transition-all duration-150 active:translate-y-px disabled:opacity-40 disabled:cursor-not-allowed text-[14px]"
+          >
+            Save
+            <Send className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
     </div>
   );

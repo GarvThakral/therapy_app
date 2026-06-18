@@ -1,7 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Bolt, NotebookPen, LineChart } from 'lucide-react';
 import { toast } from 'sonner';
+
+const AFFIRMATIONS = [
+  'You showed up today. That counts.',
+  'Small notes now, clearer sessions later.',
+  'Your patterns are worth noticing.',
+  'Nothing gets lost between sessions.',
+];
 
 import { SessionlyLogo } from '../components/SessionlyLogo';
 import { useApp } from '../context/AppContext';
@@ -33,7 +40,13 @@ export function AuthPage() {
   const [submitting, setSubmitting] = useState(false);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [processingGoogle, setProcessingGoogle] = useState(false);
+  const [affIndex, setAffIndex] = useState(0);
   const { run } = useActionRateLimit(800);
+
+  useEffect(() => {
+    const id = setInterval(() => setAffIndex(i => (i + 1) % AFFIRMATIONS.length), 4000);
+    return () => clearInterval(id);
+  }, []);
 
   const nextPath = useMemo(() => new URLSearchParams(location.search).get('next') || '/app', [location.search]);
 
@@ -131,23 +144,51 @@ export function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground px-4 py-10">
-      <div className="max-w-md mx-auto">
-        <div className="flex items-center justify-center mb-8">
-          <SessionlyLogo size={36} showWordmark wordmarkSize={22} />
+    <div className="min-h-screen bg-background text-foreground flex items-center justify-center px-4 py-10">
+      <div className="w-full max-w-5xl grid lg:grid-cols-2 rounded-2xl overflow-hidden border border-border shadow-[0_24px_70px_rgba(0,0,0,0.28)]">
+        {/* Hero panel */}
+        <div
+          className="relative p-8 lg:p-10 flex flex-col justify-between text-white overflow-hidden"
+          style={{ background: 'linear-gradient(135deg, #D4926E 0%, #C17A5A 45%, #4A6741 120%)' }}
+        >
+          <div
+            className="absolute inset-0 opacity-30 pointer-events-none"
+            style={{ background: 'radial-gradient(120% 80% at 0% 0%, rgba(255,255,255,0.25), transparent 55%)' }}
+          />
+          <div className="relative">
+            <SessionlyLogo size={40} showWordmark wordmarkSize={26} wordmarkClassName="text-white" />
+            <h1 className="mt-8 leading-tight" style={{ fontFamily: "'Playfair Display', serif", fontSize: '34px' }}>
+              Therapy doesn't end<br />in the room.
+            </h1>
+            <p key={affIndex} className="mt-4 text-[15px] text-white/90 transition-opacity duration-500 min-h-[44px]">
+              {AFFIRMATIONS[affIndex]}
+            </p>
+          </div>
+          <div className="relative mt-8 flex flex-wrap gap-2">
+            {[
+              { icon: Bolt, label: 'Log in seconds' },
+              { icon: NotebookPen, label: 'Walk in prepared' },
+              { icon: LineChart, label: 'See your patterns' },
+            ].map(({ icon: Icon, label }) => (
+              <span key={label} className="inline-flex items-center gap-1.5 rounded-full bg-white/18 px-3 py-1.5 text-[12px]">
+                <Icon className="w-3.5 h-3.5" /> {label}
+              </span>
+            ))}
+          </div>
         </div>
 
-        <div className="bg-card border border-border rounded-xl p-6">
-          <div className="flex items-center gap-2 mb-5">
+        {/* Form panel */}
+        <div className="bg-card p-7 lg:p-10 flex flex-col justify-center">
+          <div className="flex p-1 bg-secondary rounded-lg mb-6">
             <button
               onClick={() => setMode('signup')}
-              className={`px-3 py-1.5 rounded-md text-[13px] ${mode === 'signup' ? 'bg-terracotta text-white' : 'bg-secondary text-muted-foreground'}`}
+              className={`flex-1 py-2 rounded-md text-[13px] font-medium transition-all ${mode === 'signup' ? 'bg-card text-terracotta shadow-sm' : 'text-muted-foreground'}`}
             >
               Sign up
             </button>
             <button
               onClick={() => setMode('login')}
-              className={`px-3 py-1.5 rounded-md text-[13px] ${mode === 'login' ? 'bg-terracotta text-white' : 'bg-secondary text-muted-foreground'}`}
+              className={`flex-1 py-2 rounded-md text-[13px] font-medium transition-all ${mode === 'login' ? 'bg-card text-terracotta shadow-sm' : 'text-muted-foreground'}`}
             >
               Log in
             </button>
@@ -216,11 +257,11 @@ export function AuthPage() {
               </button>
             </div>
           )}
-        </div>
 
-        <p className="text-center text-[13px] text-muted-foreground mt-4">
-          <Link to="/" className="text-terracotta hover:underline">Back to home</Link>
-        </p>
+          <p className="text-center text-[13px] text-muted-foreground mt-5">
+            <Link to="/" className="text-terracotta hover:underline">Back to home</Link>
+          </p>
+        </div>
       </div>
     </div>
   );

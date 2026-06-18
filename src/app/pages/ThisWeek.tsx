@@ -6,6 +6,16 @@ import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Too
 import { toast } from 'sonner';
 import { useApp, type LogEntry } from '../context/AppContext';
 import { QuickLogBar } from '../components/QuickLogBar';
+
+const HOME_AFFIRMATIONS = [
+  'You showed up today. That counts.',
+  'Small notes now, clearer sessions later.',
+  'Be honest, not perfect.',
+  'Your patterns are worth noticing.',
+  'One thing at a time is still progress.',
+  'Naming it is the first step.',
+  'Rest is part of the work.',
+];
 import { LogEntryCard } from '../components/LogEntryCard';
 import { HomeworkItemComponent } from '../components/HomeworkItemComponent';
 import { EmptyState } from '../components/EmptyState';
@@ -40,6 +50,7 @@ export function ThisWeek() {
     updateEntry,
     plan,
     selectPlan,
+    settings,
   } = useApp();
   const [archiveOpen, setArchiveOpen] = React.useState(false);
   const [isSavingMood, setIsSavingMood] = React.useState(false);
@@ -206,6 +217,31 @@ export function ThisWeek() {
                 {thisWeekEntries.length} thing{thisWeekEntries.length !== 1 ? 's' : ''} logged this week
               </span>
             </div>
+          </div>
+
+          {/* Greeting + affirmation */}
+          <div
+            className="mb-6 rounded-2xl p-[18px] text-white"
+            style={{ background: 'linear-gradient(135deg, #C17A5A 0%, #A3613F 55%, #4A6741 120%)', boxShadow: '0 10px 22px rgba(193,122,90,0.28)' }}
+          >
+            {(() => {
+              const h = new Date().getHours();
+              const greeting = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+              const first = (settings.displayName || 'there').trim().split(' ')[0] || 'there';
+              const day = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
+              const aff = HOME_AFFIRMATIONS[day % HOME_AFFIRMATIONS.length];
+              return (
+                <>
+                  <div className="flex items-center gap-2">
+                    <span>☀️</span>
+                    <span style={{ fontFamily: "'Playfair Display', serif", fontSize: '16px', fontWeight: 600 }}>
+                      {greeting}, {first}
+                    </span>
+                  </div>
+                  <p className="text-white/90 text-[13px] mt-1.5 leading-relaxed">{aff}</p>
+                </>
+              );
+            })()}
           </div>
 
           {/* Quick Log */}
